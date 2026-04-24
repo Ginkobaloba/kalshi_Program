@@ -1,0 +1,140 @@
+# ========================================================================
+# pm_bot configuration
+# ========================================================================
+# Edit this file to control strategy behavior, risk limits, and
+# exchange routing. Secrets live in .env, never here.
+# ========================================================================
+
+runtime:
+  # Paper trade = simulate fills, don't send real orders anywhere.
+  # LEAVE THIS TRUE until you've validated a strategy has edge.
+  paper_trading: true
+
+  # Where to write the trade log SQLite db
+  db_path: ./data/pm_bot.db
+
+  # Where to write structured logs
+  log_dir: ./logs
+  log_level: INFO
+
+  # Main loop poll cadence (seconds). Lower = more API calls = more fee
+  # pressure if you turn off rate limiting. 5s is a sane minimum on
+  # basic-tier Kalshi rate limits (20 reads/sec).
+  poll_interval_sec: 5
+
+  # Graceful shutdown: cancel all open orders on exit?
+  cancel_on_exit: true
+
+
+# ------------------------------------------------------------------------
+# Exchanges
+# ------------------------------------------------------------------------
+exchanges:
+  kalshi:
+    enabled: true
+    # 'demo' uses Kalshi's sandbox, 'prod' is the real thing.
+    # Paper mode wraps either; this only matters once paper_trading=false.
+    env: demo
+    # Rate limit tier — affects how aggressive we can poll.
+    # basic (default), advanced, premier, prime
+    rate_tier: basic
+
+  polymarket:
+    # International CLOB (polymarket.com). Geoblocks US users from trading.
+    # We only READ from this for reference pricing. Trading is disabled
+    # by the compliance flag below and cannot be enabled from config alone.
+    enabled: true              # read-only pricing OK from US IPs
+    trading_enabled: false     # DO NOT ENABLE from US without compliance clearance
+    compliance_acknowledged: false  # trading requires flipping this + code change
+
+  polymarket_us:
+    # CFTC-regulated Polymarket US (QCX). Invite-only as of April 2026.
+    # Fill credentials in .env when you have access.
+    enabled: false
+    trading_enabled: false
+
+
+# ------------------------------------------------------------------------
+# Risk management — tuned for ~$1k bankroll
+# ------------------------------------------------------------------------
+risk:
+  bankroll_usd: 1000
+
+  # Fractional Kelly — 0.25 is standard-conservative. Full Kelly (1.0)
+  # maximizes log growth but has brutal drawdowns. Don't touch without
+  # knowing what you're doing.
+  kelly_fraction: 0.25
+
+  # Hard caps
+  max_position_usd: 50                # never more than $50 on one contract
+  max_concurrent_positions: 5
+  max_daily_orders: 100               # protects against a strategy gone rogue
+
+  # Kill switch: halt trading if we lose more than this in a single UTC day
+  daily_loss_limit_usd: 50
+
+  # Min edge (in basis points, after fees) required to open a position
+  min_edge_bps: 200                   # 2%
+
+  # Don't trade markets with less than this depth available
+  min_book_depth_contracts: 20
+
+  # Don't buy longshots — research shows sub-10c contracts lose 60%+
+  min_price: 0.10
+  max_price: 0.90
+
+
+# ------------------------------------------------------------------------
+# Strategies — enable/disable individually
+# ------------------------------------------------------------------------
+strategies:
+  sum_prob_arb:
+    enabled: true
+    # Minimum implied-probability-sum deviation from 1.0 (after fees) to trigger
+    min_deviation_pct: 3.0
+    # How many markets in a multi-outcome event need to be liquid enough
+    min_liquid_legs: 3
+    # Max per-leg order size
+    max_contracts_per_leg: 20
+
+  cross_market_arb:
+    enabled: true
+    # Minimum gap between same-event Kalshi vs Polymarket after fees
+    min_gap_pct: 5.0
+    # One-legged mode: Polymarket leg disabled, so trade only Kalshi
+    # direction when Polymarket implies Kalshi is mispriced.
+    # Set to 'paper_both' to simulate full arb in paper mode for research.
+    # Options: disabled, one_legged, paper_both
+    mode: paper_both
+    # Event mapping file — human-curated list of (kalshi_ticker, poly_condition_id)
+    event_map_path: ./config/event_map.yaml
+
+  market_maker:
+    # Requires meaningful inventory. Keep disabled until bankroll > $5k.
+    enabled: false
+    target_spread_cents: 3
+    inventory_skew_factor: 0.5
+    quote_size_contracts: 5
+    max_inventory_contracts: 20
+
+  news_signal:
+    # Signal-driven directional. Stub has one example (NOAA weather).
+    # Kalshi weather markets are mostly arb'd out — expect little.
+    enabled: false
+    sources:
+      noaa_weather:
+        enabled: false
+        cities: [nyc, chicago, miami, austin, la]
+      fred_econ:
+        enabled: false
+        release_lookahead_hours: 24
+
+
+# ------------------------------------------------------------------------
+# Scanner (legacy v1 edge finder, still useful as a signal generator)
+# ------------------------------------------------------------------------
+scanner:
+  # Run the v1 kalshi_edge_finder at this cadence as a signal feed.
+  # Detected edges get surfaced to strategies that subscribe to them.
+  enabled: false
+  interval_minutes: 30

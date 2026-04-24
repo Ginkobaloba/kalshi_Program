@@ -1,0 +1,25 @@
+# Core
+requests>=2.31.0
+pydantic>=2.5.0
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# Kalshi auth (RSA-PSS signing)
+cryptography>=41.0.0
+
+# Data / analysis
+pandas>=2.1.0
+numpy>=1.26.0
+tabulate>=0.9.0
+
+# WebSocket client (for future streaming)
+websocket-client>=1.7.0
+
+# Optional: Polymarket official SDK
+# Uncomment when you wire up Polymarket reads
+# py-clob-client>=0.34.6
+
+# Dev / testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+mypy>=1.7.0

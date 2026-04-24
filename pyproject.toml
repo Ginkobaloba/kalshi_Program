@@ -1,0 +1,123 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pm_bot"
+version = "0.2.0"
+description = "Prediction market trading bot (Kalshi + Polymarket)"
+readme = "README_PM_BOT.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Drew", email = "dramattick1@gmail.com" },
+]
+keywords = ["kalshi", "polymarket", "prediction-markets", "trading", "arbitrage"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "requests>=2.31.0",
+    "pydantic>=2.5.0",
+    "PyYAML>=6.0",
+    "python-dotenv>=1.0.0",
+    "cryptography>=41.0.0",
+    "pandas>=2.1.0",
+    "numpy>=1.26.0",
+    "tabulate>=0.9.0",
+    "websocket-client>=1.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.7.0",
+    "ruff>=0.1.0",
+    "black>=23.0.0",
+]
+polymarket = [
+    "py-clob-client>=0.34.6",
+]
+
+[project.scripts]
+pm-bot = "run_bot:main"
+
+[project.urls]
+Homepage = "https://github.com/YOUR_USERNAME/Kalashi_Program"
+Repository = "https://github.com/YOUR_USERNAME/Kalashi_Program"
+
+[tool.setuptools.packages.find]
+include = ["pm_bot*"]
+exclude = ["tests*", "scripts*", ".mypy_cache*"]
+
+# ---- Tooling ----
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+# Unlike black, ruff is fast and handles lint too. Minimal ruleset for now.
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # bugbear (catches common gotchas)
+]
+ignore = [
+    "E501",  # line-too-long — let formatter handle
+    "B008",  # function call in argument default (common in FastAPI etc.)
+]
+exclude = [
+    ".mypy_cache",
+    ".pytest_cache",
+    "build",
+    "dist",
+    "kalshi_edge_finder.py",  # legacy v1, out of scope for lint
+]
+
+[tool.ruff.per-file-ignores]
+"tests/*" = ["E402"]  # allow imports after path manipulation
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+extend-exclude = '''
+/(
+    \.mypy_cache
+  | kalshi_edge_finder\.py
+)/
+'''
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false      # relaxed — we'll tighten later
+ignore_missing_imports = true
+exclude = [
+    "kalshi_edge_finder\\.py",
+    "\\.mypy_cache",
+    "tests/",
+]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "-ra",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
