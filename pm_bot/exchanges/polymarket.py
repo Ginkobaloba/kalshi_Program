@@ -19,7 +19,6 @@ Public endpoints used:
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 import requests
 
@@ -71,7 +70,7 @@ class PolymarketAdapter(ExchangeAdapter):
             time.sleep(wait)
         self._last_req = time.monotonic()
 
-    def _get(self, base: str, path: str, params: Optional[dict] = None) -> dict:
+    def _get(self, base: str, path: str, params: dict | None = None) -> dict:
         self._throttle()
         resp = self.session.get(base + path, params=params, timeout=15)
         if resp.status_code == 403:
@@ -85,7 +84,7 @@ class PolymarketAdapter(ExchangeAdapter):
         self,
         status: str = "open",
         limit: int = 100,
-        event_id: Optional[str] = None,
+        event_id: str | None = None,
     ) -> list[Market]:
         """Pull markets from the Gamma metadata API."""
         params: dict = {"limit": limit, "active": "true", "closed": "false"}
@@ -104,10 +103,10 @@ class PolymarketAdapter(ExchangeAdapter):
         raw_markets = data if isinstance(data, list) else data.get("markets", [])
         return [self._parse_market(m) for m in raw_markets if m]
 
-    def get_market(self, ticker: str) -> Optional[Market]:
+    def get_market(self, ticker: str) -> Market | None:
         """`ticker` here is Polymarket's condition_id or question_id."""
         try:
-            data = self._get(GAMMA_BASE, f"/markets", params={"condition_ids": ticker})
+            data = self._get(GAMMA_BASE, "/markets", params={"condition_ids": ticker})
             markets = data if isinstance(data, list) else data.get("markets", [])
             if not markets:
                 return None
@@ -115,7 +114,7 @@ class PolymarketAdapter(ExchangeAdapter):
         except requests.HTTPError:
             return None
 
-    def get_orderbook(self, ticker: str, depth: int = 10) -> Optional[OrderBook]:
+    def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None:
         """
         Ticker here must be the token_id (YES side). Polymarket orderbooks
         are per-token (ERC-1155) rather than per-market.
@@ -140,13 +139,13 @@ class PolymarketAdapter(ExchangeAdapter):
             return out
 
         yes_bids = sorted(to_levels(data.get("bids", []), depth),
-                          key=lambda l: l.price, reverse=True)
+                          key=lambda lvl: lvl.price, reverse=True)
         yes_asks = sorted(to_levels(data.get("asks", []), depth),
-                          key=lambda l: l.price)
+                          key=lambda lvl: lvl.price)
 
         # NO side is derived: NO bid at price p <=> YES ask at (1-p)
-        no_bids = [OrderBookLevel(price=1 - l.price, size=l.size) for l in yes_asks]
-        no_asks = [OrderBookLevel(price=1 - l.price, size=l.size) for l in yes_bids]
+        no_bids = [OrderBookLevel(price=1 - lvl.price, size=lvl.size) for lvl in yes_asks]
+        no_asks = [OrderBookLevel(price=1 - lvl.price, size=lvl.size) for lvl in yes_bids]
 
         return OrderBook(
             venue=self.venue,

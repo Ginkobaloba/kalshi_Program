@@ -97,7 +97,7 @@ class Secrets(BaseModel):
     polymarket_us_api_secret: str = ""
 
     @classmethod
-    def from_env(cls) -> "Secrets":
+    def from_env(cls) -> Secrets:
         return cls(
             kalshi_api_key_id=os.environ.get("KALSHI_API_KEY_ID", ""),
             kalshi_private_key_path=os.environ.get(
@@ -133,7 +133,7 @@ def load_config(path: str | Path = "config.yaml") -> Config:
             f"Copy config.yaml from the repo root."
         )
 
-    with open(p, "r", encoding="utf-8") as f:
+    with open(p, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
 
     return Config(

@@ -7,7 +7,6 @@ adapters through this surface only — they never touch vendor SDKs.
 from __future__ import annotations
 
 import abc
-from typing import Optional
 
 from pm_bot.models import (
     Market,
@@ -34,16 +33,16 @@ class ExchangeAdapter(abc.ABC):
         self,
         status: str = "open",
         limit: int = 200,
-        event_id: Optional[str] = None,
+        event_id: str | None = None,
     ) -> list[Market]:
         ...
 
     @abc.abstractmethod
-    def get_market(self, ticker: str) -> Optional[Market]:
+    def get_market(self, ticker: str) -> Market | None:
         ...
 
     @abc.abstractmethod
-    def get_orderbook(self, ticker: str, depth: int = 10) -> Optional[OrderBook]:
+    def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None:
         ...
 
     # ----- trading path ---------------------------------------------------

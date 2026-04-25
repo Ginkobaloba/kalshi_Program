@@ -18,14 +18,12 @@ from __future__ import annotations
 import time
 import uuid
 from datetime import datetime
-from typing import Optional
 
 import requests
 
-from pm_bot.exchanges.base import ComplianceError, ExchangeAdapter
+from pm_bot.exchanges.base import ExchangeAdapter
 from pm_bot.logger import get_logger
 from pm_bot.models import (
-    Action,
     Market,
     Order,
     OrderBook,
@@ -99,8 +97,8 @@ class KalshiAdapter(ExchangeAdapter):
         self,
         method: str,
         path: str,
-        params: Optional[dict] = None,
-        body: Optional[dict] = None,
+        params: dict | None = None,
+        body: dict | None = None,
         auth: bool = False,
     ) -> dict:
         self._throttle(write=(method != "GET"))
@@ -135,7 +133,7 @@ class KalshiAdapter(ExchangeAdapter):
         self,
         status: str = "open",
         limit: int = 200,
-        event_id: Optional[str] = None,
+        event_id: str | None = None,
     ) -> list[Market]:
         params = {"limit": min(limit, 200), "status": status}
         if event_id:
@@ -143,7 +141,7 @@ class KalshiAdapter(ExchangeAdapter):
         data = self._request("GET", "/markets", params=params)
         return [self._parse_market(m) for m in data.get("markets", [])]
 
-    def get_market(self, ticker: str) -> Optional[Market]:
+    def get_market(self, ticker: str) -> Market | None:
         try:
             data = self._request("GET", f"/markets/{ticker}")
             m = data.get("market")
@@ -153,7 +151,7 @@ class KalshiAdapter(ExchangeAdapter):
                 return None
             raise
 
-    def get_orderbook(self, ticker: str, depth: int = 10) -> Optional[OrderBook]:
+    def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None:
         try:
             data = self._request(
                 "GET", f"/markets/{ticker}/orderbook", params={"depth": depth}
@@ -182,8 +180,8 @@ class KalshiAdapter(ExchangeAdapter):
             # Sort yes bids descending (best first), yes asks ascending
             return out
 
-        yes_bids = sorted(parse_levels(yes_levels), key=lambda l: l.price, reverse=True)
-        no_bids = sorted(parse_levels(no_levels), key=lambda l: l.price, reverse=True)
+        yes_bids = sorted(parse_levels(yes_levels), key=lambda lvl: lvl.price, reverse=True)
+        no_bids = sorted(parse_levels(no_levels), key=lambda lvl: lvl.price, reverse=True)
 
         # Kalshi returns bid books; we synthesize asks from the other side:
         # the "yes ask" price = 1 - best NO bid price; the size is the NO depth
@@ -225,7 +223,7 @@ class KalshiAdapter(ExchangeAdapter):
         yes_ask = min(1.0, max(yes_ask, yes_bid))
         no_ask = min(1.0, max(no_ask, no_bid))
 
-        close_time: Optional[datetime] = None
+        close_time: datetime | None = None
         if raw.get("close_time"):
             try:
                 close_time = datetime.fromisoformat(raw["close_time"].replace("Z", "+00:00"))

@@ -14,7 +14,6 @@ import argparse
 import signal
 import sys
 import time
-from typing import Optional
 
 from pm_bot.config import Config, load_config
 from pm_bot.exchanges.base import ExchangeAdapter
@@ -99,7 +98,7 @@ def route_signal(
     db: Database,
     paper: bool,
     dry_run: bool,
-) -> Optional[Order]:
+) -> Order | None:
     """Run one signal through risk and place if accepted."""
     adapter = adapters.get(signal.venue)
     book = adapter.get_orderbook(signal.ticker) if adapter else None
@@ -191,7 +190,7 @@ def scan_cycle(
 
 def check_paper_fills(adapters: dict[Venue, ExchangeAdapter], db: Database) -> None:
     """In paper mode, poll for simulated fills on pending orders."""
-    for venue, adapter in adapters.items():
+    for _venue, adapter in adapters.items():
         if isinstance(adapter, PaperAdapter):
             fills = adapter.check_pending()
             for f in fills:

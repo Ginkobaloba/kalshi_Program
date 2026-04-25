@@ -20,9 +20,6 @@ Every decision — accept, reject, trim — is logged to the DB with reason.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
-
 from pm_bot.config import RiskConfig
 from pm_bot.exchanges.base import ExchangeAdapter
 from pm_bot.logger import get_logger
@@ -63,7 +60,7 @@ class RiskManager:
     def evaluate(
         self,
         signal: TradeSignal,
-        book: Optional[OrderBook] = None,
+        book: OrderBook | None = None,
     ) -> tuple[bool, str]:
         """
         Decide whether to accept a signal. Returns (accept, reason).
@@ -142,8 +139,8 @@ class RiskManager:
     def route(
         self,
         signal: TradeSignal,
-        book: Optional[OrderBook] = None,
-    ) -> Optional[Order]:
+        book: OrderBook | None = None,
+    ) -> Order | None:
         """
         Full pipeline: evaluate -> size -> build Order. Returns None on reject.
         Logs either way.

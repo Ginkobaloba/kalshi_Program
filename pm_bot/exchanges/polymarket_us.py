@@ -17,8 +17,6 @@ When implementing:
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pm_bot.exchanges.base import ExchangeAdapter
 from pm_bot.logger import get_logger
 from pm_bot.models import Market, Order, OrderBook, Position, Venue
@@ -45,15 +43,15 @@ class PolymarketUSAdapter(ExchangeAdapter):
             )
 
     def list_markets(self, status: str = "open", limit: int = 200,
-                     event_id: Optional[str] = None) -> list[Market]:
+                     event_id: str | None = None) -> list[Market]:
         raise NotImplementedError(
             "Polymarket US adapter is a stub. Implement when you have QCX access."
         )
 
-    def get_market(self, ticker: str) -> Optional[Market]:
+    def get_market(self, ticker: str) -> Market | None:
         raise NotImplementedError("Polymarket US stub.")
 
-    def get_orderbook(self, ticker: str, depth: int = 10) -> Optional[OrderBook]:
+    def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None:
         raise NotImplementedError("Polymarket US stub.")
 
     def supports_trading(self) -> bool:
