@@ -1,10 +1,13 @@
 """
-Improved diagnostic: paginate through Kalshi to find liquid multi-outcome events.
+Diagnostic v4: sample-based scan that respects basic-tier rate limits.
 
-Approach:
-  1. Hit /events endpoint directly — Kalshi groups markets server-side
-  2. For events with 3+ open markets, fetch the constituent markets
-  3. Compute the YES-price sum (the sum-prob-arb signal)
+Kalshi prod has 3401+ mutually-exclusive events. Scanning all of them
+takes hours at 20 reads/sec. This version SAMPLES intelligently:
+  - Only first 1000 events (paginated) — covers active events
+  - Filters to mutually-exclusive
+  - Sorts by 'last_updated_ts' descending (most-active first)
+  - Caps at 50 events for orderbook scan
+  - Throttles to 1 req/sec — slow but lint-clean
 
 Usage:
   python scripts/scan_diagnostic.py             # demo env
@@ -14,93 +17,132 @@ Usage:
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pm_bot.exchanges.kalshi import KalshiAdapter
 
+EVENT_PAGES = 5         # 5 pages * 200 = 1000 events sampled
+EVENT_SCAN_CAP = 50     # cap orderbook scans at this many events
+THROTTLE_SEC = 1.0      # 1 req/sec — very polite, no 429s
 
-def fetch_all_events(k: KalshiAdapter, max_pages: int = 20) -> list[dict]:
-    """Paginate through /events to collect all open events."""
-    events: list[dict] = []
-    cursor = None
-    for _ in range(max_pages):
-        params = {"limit": 200, "status": "open"}
-        if cursor:
-            params["cursor"] = cursor
-        data = k._request("GET", "/events", params=params)
-        page = data.get("events", []) or []
-        if not page:
-            break
-        events.extend(page)
-        cursor = data.get("cursor")
-        if not cursor:
-            break
-    return events
+
+def fetch_events_page(k: KalshiAdapter, cursor: str | None) -> tuple[list[dict], str | None]:
+    params = {"limit": 200, "status": "open"}
+    if cursor:
+        params["cursor"] = cursor
+    data = k._request("GET", "/events", params=params)
+    return data.get("events", []) or [], data.get("cursor")
 
 
 def main() -> int:
     env = sys.argv[1] if len(sys.argv) > 1 else "demo"
-    print(f"=== Kalshi {env.upper()} env ===\n")
+    print(f"=== Kalshi {env.upper()} env (sampled scan, throttled) ===\n")
 
     k = KalshiAdapter(env=env)
 
-    print("Fetching all open events (paginated)...")
-    events = fetch_all_events(k)
-    print(f"  total open events:      {len(events)}\n")
+    print(f"[1/4] Sampling first {EVENT_PAGES * 200} events...")
+    events: list[dict] = []
+    cursor: str | None = None
+    for page_idx in range(EVENT_PAGES):
+        time.sleep(THROTTLE_SEC)
+        try:
+            page, cursor = fetch_events_page(k, cursor)
+        except Exception as e:
+            print(f"  page {page_idx + 1} error: {e}")
+            break
+        events.extend(page)
+        print(f"      page {page_idx + 1}: +{len(page)} events  total={len(events)}")
+        if not cursor:
+            break
 
-    if not events:
-        print("No events returned. Check connectivity.")
-        return 1
+    me_events = [e for e in events if e.get("mutually_exclusive")]
+    print(f"\n      mutually-exclusive in sample: {len(me_events)}")
 
-    # Each event has a `markets` count (or we can re-query)
-    # Many event objects include market_count or similar — let's see.
-    sample = events[0]
-    print("Sample event keys:", list(sample.keys())[:15])
-    print()
+    # Sort by recency (most recently updated first)
+    me_events.sort(
+        key=lambda e: e.get("last_updated_ts") or "",
+        reverse=True,
+    )
+    me_events = me_events[:EVENT_SCAN_CAP]
+    print(f"      scanning top {len(me_events)} by recency\n")
 
-    # Try to get markets count from event object
-    multi_outcome: list[tuple[str, int]] = []
-    for ev in events:
-        ticker = ev.get("event_ticker") or ev.get("ticker") or ev.get("series_ticker", "?")
-        # Different field names depending on response shape
-        n_markets = ev.get("market_count") or ev.get("markets_count")
-        if n_markets is None and "markets" in ev:
-            n_markets = len(ev["markets"]) if isinstance(ev["markets"], list) else None
-        if n_markets and n_markets >= 3:
-            multi_outcome.append((ticker, n_markets, ev.get("title", "")[:60]))
+    print("[2/4] Fetching market lists per event (1 req/sec)...")
+    candidates: list[tuple[dict, list]] = []
+    for ev in me_events:
+        ticker = ev.get("event_ticker") or ev.get("ticker")
+        if not ticker:
+            continue
+        time.sleep(THROTTLE_SEC)
+        try:
+            markets = k.list_markets(event_id=ticker, limit=100)
+        except Exception:
+            continue
+        if len(markets) >= 3:
+            candidates.append((ev, markets))
+    print(f"      events with 3+ markets: {len(candidates)}\n")
 
-    print(f"Events with >=3 markets (from event metadata): {len(multi_outcome)}")
-    for tup in multi_outcome[:15]:
-        ticker, n, title = tup
-        print(f"  {n:3d} legs  {ticker:30s}  {title}")
+    if not candidates:
+        print("No multi-leg events found in sample.")
+        return 0
 
-    if not multi_outcome:
-        print("\nFalling back: querying markets per event manually...")
-        # For each event, fetch its markets
-        keepers = []
-        for ev in events[:50]:  # cap to avoid hammering
-            ticker = ev.get("event_ticker") or ev.get("ticker")
-            if not ticker:
-                continue
+    print("[3/4] Pulling orderbooks for each leg (slowest step, ~1 req/sec)...")
+    total_books = sum(len(m) for _, m in candidates)
+    print(f"      will pull ~{total_books} orderbooks ({total_books * THROTTLE_SEC:.0f}s estimated)\n")
+
+    print(f"{'sum(ASK)':>9} {'sum(BID)':>9} {'covg':>7}  {'event':<28}  title")
+    print("-" * 110)
+
+    arb_candidates = []
+    for idx, (ev, markets) in enumerate(candidates, 1):
+        ticker = ev.get("event_ticker", "?")
+        title = ev.get("title", "")[:45]
+
+        yes_asks: list[float] = []
+        yes_bids: list[float] = []
+
+        for m in markets:
+            time.sleep(THROTTLE_SEC)
             try:
-                markets = k.list_markets(event_id=ticker, limit=20)
-                if len(markets) >= 3:
-                    keepers.append((ticker, markets, ev.get("title", "")[:60]))
+                book = k.get_orderbook(m.ticker, depth=1)
             except Exception:
                 continue
-
-        print(f"  Found {len(keepers)} events with 3+ markets")
-        for ticker, markets, title in keepers[:10]:
-            valid = [m for m in markets if 0 < m.yes_ask < 1]
-            if not valid:
-                print(f"  {ticker:30s}  {len(markets)} markets, all empty books  ({title})")
+            if book is None:
                 continue
-            ys = sum(m.yes_ask for m in valid)
-            avg_vol = sum(m.volume for m in valid) / len(valid)
-            print(f"  sum(YES)={ys:.3f}  legs={len(valid):2d}  avg_vol={avg_vol:5.0f}  "
-                  f"{ticker}  ({title})")
+            best_ask = book.best_yes_ask()
+            best_bid = book.best_yes_bid()
+            if best_ask:
+                yes_asks.append(best_ask.price)
+            if best_bid:
+                yes_bids.append(best_bid.price)
+
+        sum_ask = sum(yes_asks)
+        sum_bid = sum(yes_bids)
+        n_legs = len(markets)
+        covg = f"{len(yes_asks)}/{n_legs}"
+
+        marker = ""
+        if len(yes_asks) == n_legs and sum_ask > 1.03:
+            marker = "  *** ARB"
+            arb_candidates.append((ticker, sum_ask, n_legs, title))
+        elif len(yes_asks) == n_legs and sum_ask > 1.0:
+            marker = "  marginal"
+
+        print(f"  {sum_ask:>7.3f}  {sum_bid:>7.3f}  {covg:>7}  {ticker:<28}  {title}{marker}")
+
+    print()
+    print("[4/4] Summary")
+    if arb_candidates:
+        print(f"\n=== {len(arb_candidates)} ARB CANDIDATE(S) (sum > 1.03, full coverage) ===")
+        for ticker, total, n, title in arb_candidates:
+            edge_per_basket = (total - 1) * 100
+            print(f"  ${edge_per_basket:5.2f} per 100-basket  sum(YES)={total:.3f}  "
+                  f"{n} legs  {ticker}  ({title})")
+    else:
+        print("\nNo arb candidates with sum > 1.03 in this sample.")
+        print("Try re-running — the sort by recency rotates which events get scanned.")
 
     return 0
 

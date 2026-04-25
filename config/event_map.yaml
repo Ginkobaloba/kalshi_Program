@@ -1,0 +1,54 @@
+# ============================================================================
+# Cross-exchange event map: Kalshi <-> Polymarket
+#
+# Each entry maps a Kalshi event (with multiple legs) to the equivalent
+# Polymarket event. The strategy then compares leg-by-leg prices for
+# arb opportunities.
+#
+# Verify both events resolve on the SAME criteria before adding —
+# settlement-criteria divergence is the #1 source of "arb" turning into
+# total loss. Read both rule pages carefully.
+#
+# Format:
+#   pairs:
+#     - name: "human-readable label"
+#       kalshi_event: KX...-YY    # event_ticker (not market ticker)
+#       poly_keywords: [...]       # used to find the matching event by title
+#       leg_match: name|ticker     # how to match legs across exchanges
+#       notes: "anything important about resolution criteria"
+# ============================================================================
+
+pairs:
+  - name: "NBA Champion 2026"
+    kalshi_event: KXNBA-26
+    poly_keywords: ["nba champion 2026"]
+    leg_match: name
+    notes: |
+      Both resolve on the team that wins the 2026 NBA Finals.
+      Confirmed live edges: Boston 1.3c, OKC 1.0c (April 2026 snapshot).
+      ~16 legs each side. Liquid: SAS, OKC, BOS on both.
+
+  - name: "NBA Western Conference 2026"
+    kalshi_event: KXNBAWEST-26
+    poly_keywords: ["nba western conference"]
+    leg_match: name
+    notes: |
+      Resolves to the team that wins the 2026 Western Conference Finals.
+      Biggest live edge so far: SAS 1.4c (P 0.166 / K_bid 0.180).
+      8 legs Kalshi, 16 Polymarket.
+
+  - name: "NBA Eastern Conference 2026"
+    kalshi_event: KXNBAEAST-26
+    poly_keywords: ["nba eastern conference"]
+    leg_match: name
+    notes: |
+      Resolves to team winning 2026 Eastern Conference Finals.
+      Boston shows 1.2c edge consistently.
+
+  # Add more pairs as we find them. Each pair must be MANUALLY verified
+  # for resolution-criteria match before adding.
+
+# Pairs intentionally NOT added (settlement risk too high):
+#   - Pres 2028 (Kalshi long-tail markets have empty books — not tradeable)
+#   - Fed Decision (timing windows differ between exchanges)
+#   - Political/cultural niche (Pope, Xi successor — Kalshi books dead)
