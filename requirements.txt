@@ -15,9 +15,9 @@ tabulate>=0.9.0
 # WebSocket client (for future streaming)
 websocket-client>=1.7.0
 
-# Optional: Polymarket official SDK
-# Uncomment when you wire up Polymarket reads
-# py-clob-client>=0.34.6
+# Polymarket SDK (used by scripts/polymarket_setup_api_keys.py and the Polymarket adapter)
+
+py-clob-client>=0.34.6
 
 # Dev / testing
 pytest>=7.4.0
