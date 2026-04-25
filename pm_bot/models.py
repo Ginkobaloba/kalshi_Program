@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -63,8 +62,8 @@ class Market(BaseModel):
     volume: int = 0
     open_interest: int = 0
     category: str = ""
-    close_time: Optional[datetime] = None
-    event_id: Optional[str] = None   # groups related markets (multi-outcome events)
+    close_time: datetime | None = None
+    event_id: str | None = None   # groups related markets (multi-outcome events)
     status: str = "open"
 
     @property
@@ -101,21 +100,21 @@ class OrderBook(BaseModel):
     no_asks: list[OrderBookLevel] = Field(default_factory=list)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
-    def best_yes_bid(self) -> Optional[OrderBookLevel]:
+    def best_yes_bid(self) -> OrderBookLevel | None:
         return self.yes_bids[0] if self.yes_bids else None
 
-    def best_yes_ask(self) -> Optional[OrderBookLevel]:
+    def best_yes_ask(self) -> OrderBookLevel | None:
         return self.yes_asks[0] if self.yes_asks else None
 
     def depth(self, side: Side, action: Action) -> int:
         """Total contracts available at all levels on one side of the book."""
         if side == Side.YES and action == Action.BUY:
-            return sum(l.size for l in self.yes_asks)
+            return sum(lvl.size for lvl in self.yes_asks)
         if side == Side.YES and action == Action.SELL:
-            return sum(l.size for l in self.yes_bids)
+            return sum(lvl.size for lvl in self.yes_bids)
         if side == Side.NO and action == Action.BUY:
-            return sum(l.size for l in self.no_asks)
-        return sum(l.size for l in self.no_bids)
+            return sum(lvl.size for lvl in self.no_asks)
+        return sum(lvl.size for lvl in self.no_bids)
 
 
 # ------------------------------------------------------------------------
@@ -132,7 +131,7 @@ class Order(BaseModel):
     price: float                     # dollars, 0..1
     size: int                        # number of contracts
     client_order_id: str             # our unique id
-    exchange_order_id: Optional[str] = None
+    exchange_order_id: str | None = None
     status: OrderStatus = OrderStatus.PENDING
     filled_size: int = 0
     avg_fill_price: float = 0.0
@@ -187,7 +186,7 @@ class TradeSignal(BaseModel):
     confidence: float = 0.5          # 0..1
     reasoning: str = ""
     # For multi-leg strategies: companion legs that must all fill or none.
-    companion_signals: list["TradeSignal"] = Field(default_factory=list)
+    companion_signals: list[TradeSignal] = Field(default_factory=list)
 
     model_config = {"arbitrary_types_allowed": True}
 

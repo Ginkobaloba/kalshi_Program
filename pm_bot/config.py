@@ -96,8 +96,14 @@ class Secrets(BaseModel):
     polymarket_us_api_key: str = ""
     polymarket_us_api_secret: str = ""
 
+    # Polymarket Relayer (gasless transactions). Sponsors gas; does NOT
+    # bypass the US geoblock on order placement.
+    relayer_api_key: str = ""
+    relayer_api_key_address: str = ""
+    relayer_host: str = "https://relayer-v2.polymarket.com/"
+
     @classmethod
-    def from_env(cls) -> "Secrets":
+    def from_env(cls) -> Secrets:
         return cls(
             kalshi_api_key_id=os.environ.get("KALSHI_API_KEY_ID", ""),
             kalshi_private_key_path=os.environ.get(
@@ -112,6 +118,9 @@ class Secrets(BaseModel):
             polymarket_api_passphrase=os.environ.get("POLYMARKET_API_PASSPHRASE", ""),
             polymarket_us_api_key=os.environ.get("POLYMARKET_US_API_KEY", ""),
             polymarket_us_api_secret=os.environ.get("POLYMARKET_US_API_SECRET", ""),
+            relayer_api_key=os.environ.get("RELAYER_API_KEY", ""),
+            relayer_api_key_address=os.environ.get("RELAYER_API_KEY_ADDRESS", ""),
+            relayer_host=os.environ.get("RELAYER_HOST", "https://relayer-v2.polymarket.com/"),
         )
 
 
@@ -133,11 +142,16 @@ def load_config(path: str | Path = "config.yaml") -> Config:
             f"Copy config.yaml from the repo root."
         )
 
-    with open(p, "r", encoding="utf-8") as f:
+    with open(p, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
 
+    runtime_dict = raw.get("runtime") or {}
+    # Env var override for log level - useful for one-off DEBUG runs
+    if os.environ.get("LOG_LEVEL"):
+        runtime_dict["log_level"] = os.environ["LOG_LEVEL"]
+
     return Config(
-        runtime=RuntimeConfig(**(raw.get("runtime") or {})),
+        runtime=RuntimeConfig(**runtime_dict),
         exchanges=ExchangesConfig(**(raw.get("exchanges") or {})),
         risk=RiskConfig(**(raw.get("risk") or {})),
         strategies=StrategiesConfig(**(raw.get("strategies") or {})),

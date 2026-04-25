@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Optional
 
 from pm_bot.exchanges.base import ExchangeAdapter
 from pm_bot.logger import get_logger
@@ -56,10 +55,10 @@ class PaperAdapter(ExchangeAdapter):
     def list_markets(self, status="open", limit=200, event_id=None) -> list[Market]:
         return self._inner.list_markets(status=status, limit=limit, event_id=event_id)
 
-    def get_market(self, ticker: str) -> Optional[Market]:
+    def get_market(self, ticker: str) -> Market | None:
         return self._inner.get_market(ticker)
 
-    def get_orderbook(self, ticker: str, depth: int = 10) -> Optional[OrderBook]:
+    def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None:
         return self._inner.get_orderbook(ticker, depth=depth)
 
     # ----- simulated trading ---------------------------------------------
@@ -107,7 +106,6 @@ class PaperAdapter(ExchangeAdapter):
             book = self._inner.get_orderbook(order.ticker)
             if not book:
                 continue
-            prior_status = order.status
             self._try_match(order, book)
             if order.status in (OrderStatus.FILLED, OrderStatus.PARTIAL):
                 del self._pending_orders[cid]

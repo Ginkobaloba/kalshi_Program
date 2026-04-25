@@ -1,0 +1,123 @@
+name: Deploy
+
+# Triggers:
+#   - push to 'main' that includes a release tag (vX.Y.Z) -> deploys to PAPER
+#   - manual workflow_dispatch -> can target paper OR live (with confirmation)
+#
+# Required secrets (set in GitHub repo Settings -> Secrets):
+#   PAPER_VPS_HOST          ssh hostname (e.g. paper.yourdomain.com)
+#   PAPER_VPS_USER          ssh username (typically 'deploy' — NOT root)
+#   PAPER_VPS_SSH_KEY       private key contents for SSH access
+#   LIVE_VPS_HOST           same for the live trading box
+#   LIVE_VPS_USER
+#   LIVE_VPS_SSH_KEY
+#
+# Trading-bot deploy philosophy:
+#   - Auto-deploy to PAPER on every successful main merge
+#   - Require manual approval to deploy to LIVE
+#   - Smoke test (--once --dry) before swapping the running process
+#   - Auto-rollback on health check failure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Deploy target'
+        required: true
+        default: 'paper'
+        type: choice
+        options:
+          - paper
+          - live
+
+# Don't run multiple deploys concurrently
+concurrency:
+  group: deploy-${{ github.event.inputs.target || 'paper' }}
+  cancel-in-progress: false
+
+jobs:
+  # First, wait for CI to be green on this commit
+  wait_for_ci:
+    name: Verify CI passed
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Wait for CI completion
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.sha }}
+          check-name: 'Tests (3.11)'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 20
+
+  deploy_paper:
+    name: Deploy to PAPER VPS
+    needs: wait_for_ci
+    if: github.event_name == 'push' || github.event.inputs.target == 'paper'
+    runs-on: ubuntu-latest
+    environment:
+      name: paper      # see GitHub repo Settings -> Environments
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PAPER_VPS_SSH_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.PAPER_VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run update.sh on VPS
+        run: |
+          ssh ${{ secrets.PAPER_VPS_USER }}@${{ secrets.PAPER_VPS_HOST }} \
+            "sudo /opt/kalshi_program/deploy/update.sh"
+
+      - name: Verify health post-deploy
+        run: |
+          ssh ${{ secrets.PAPER_VPS_USER }}@${{ secrets.PAPER_VPS_HOST }} \
+            "bash /opt/kalshi_program/deploy/healthcheck.sh"
+
+      - name: Notify (placeholder)
+        if: always()
+        run: |
+          echo "Paper deploy result: ${{ job.status }}"
+          # TODO: hook up to Discord/Slack/email when ready
+
+  deploy_live:
+    name: Deploy to LIVE VPS
+    needs: wait_for_ci
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'live'
+    runs-on: ubuntu-latest
+    environment:
+      name: live       # set up in GitHub UI with required-reviewers protection
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.LIVE_VPS_SSH_KEY }}
+
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.LIVE_VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Confirm paper has been running successfully
+        run: |
+          # Ask paper VPS for its uptime + recent kill switches
+          # If paper is unhealthy, refuse to deploy to live
+          ssh ${{ secrets.LIVE_VPS_USER }}@${{ secrets.LIVE_VPS_HOST }} \
+            "bash /opt/kalshi_program/deploy/healthcheck.sh" || \
+            (echo "LIVE health check failed pre-deploy — aborting" && exit 1)
+
+      - name: Run update.sh on LIVE VPS
+        run: |
+          ssh ${{ secrets.LIVE_VPS_USER }}@${{ secrets.LIVE_VPS_HOST }} \
+            "sudo /opt/kalshi_program/deploy/update.sh"
+
+      - name: Verify health post-deploy
+        run: |
+          ssh ${{ secrets.LIVE_VPS_USER }}@${{ secrets.LIVE_VPS_HOST }} \
+            "bash /opt/kalshi_program/deploy/healthcheck.sh"

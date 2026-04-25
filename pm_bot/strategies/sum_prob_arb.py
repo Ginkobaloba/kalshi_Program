@@ -70,7 +70,6 @@ class SumProbArbStrategy(Strategy):
             # equivalently, (1 - no_ask) would give same numerical info but
             # yes_ask is what we'd actually pay as a taker.
             yes_asks = [m.yes_ask for m in legs]
-            no_asks = [m.no_ask for m in legs]
 
             sum_yes = sum(yes_asks)
             # Arb exists if we can buy all NO for less than (N-1)
@@ -94,7 +93,6 @@ class SumProbArbStrategy(Strategy):
             basket_size = min(self.max_contracts_per_leg,
                               min(max(1, m.volume // 100) for m in legs))
 
-            edge_frac = edge_per_basket  # per $1 outcome-basket spend
             total_cost = sum(m.no_ask for m in legs) * basket_size
             edge_pct = (edge_per_basket * basket_size) / max(total_cost, 0.01)
 
@@ -128,4 +126,8 @@ class SumProbArbStrategy(Strategy):
                 event_id, len(legs), sum_yes, edge_per_basket,
             )
 
+        log.info(
+            "sum_prob_arb scanned %d markets, %d multi-outcome events, %d candidates",
+            len(markets), len(groups), len(signals),
+        )
         return signals

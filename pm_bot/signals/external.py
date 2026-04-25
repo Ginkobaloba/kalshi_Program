@@ -9,7 +9,6 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Optional
 
 
 def _load_legacy_module():
@@ -32,7 +31,7 @@ def _load_legacy_module():
 _legacy = _load_legacy_module()
 
 
-def fred_client() -> Optional[object]:
+def fred_client() -> object | None:
     """Return an instance of the legacy FREDClient, or None if unavailable."""
     if _legacy is None:
         return None
@@ -42,7 +41,7 @@ def fred_client() -> Optional[object]:
         return None
 
 
-def noaa_client() -> Optional[object]:
+def noaa_client() -> object | None:
     if _legacy is None:
         return None
     try:

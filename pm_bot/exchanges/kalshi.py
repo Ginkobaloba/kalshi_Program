@@ -18,14 +18,12 @@ from __future__ import annotations
 import time
 import uuid
 from datetime import datetime
-from typing import Optional
 
 import requests
 
-from pm_bot.exchanges.base import ComplianceError, ExchangeAdapter
+from pm_bot.exchanges.base import ExchangeAdapter
 from pm_bot.logger import get_logger
 from pm_bot.models import (
-    Action,
     Market,
     Order,
     OrderBook,
@@ -99,8 +97,8 @@ class KalshiAdapter(ExchangeAdapter):
         self,
         method: str,
         path: str,
-        params: Optional[dict] = None,
-        body: Optional[dict] = None,
+        params: dict | None = None,
+        body: dict | None = None,
         auth: bool = False,
     ) -> dict:
         self._throttle(write=(method != "GET"))
@@ -135,7 +133,7 @@ class KalshiAdapter(ExchangeAdapter):
         self,
         status: str = "open",
         limit: int = 200,
-        event_id: Optional[str] = None,
+        event_id: str | None = None,
     ) -> list[Market]:
         params = {"limit": min(limit, 200), "status": status}
         if event_id:
@@ -143,7 +141,7 @@ class KalshiAdapter(ExchangeAdapter):
         data = self._request("GET", "/markets", params=params)
         return [self._parse_market(m) for m in data.get("markets", [])]
 
-    def get_market(self, ticker: str) -> Optional[Market]:
+    def get_market(self, ticker: str) -> Market | None:
         try:
             data = self._request("GET", f"/markets/{ticker}")
             m = data.get("market")
@@ -153,7 +151,7 @@ class KalshiAdapter(ExchangeAdapter):
                 return None
             raise
 
-    def get_orderbook(self, ticker: str, depth: int = 10) -> Optional[OrderBook]:
+    def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None:
         try:
             data = self._request(
                 "GET", f"/markets/{ticker}/orderbook", params={"depth": depth}
@@ -163,27 +161,32 @@ class KalshiAdapter(ExchangeAdapter):
                 return None
             raise
 
-        ob = data.get("orderbook") or {}
-        yes_levels = ob.get("yes") or []
-        no_levels = ob.get("no") or []
+        # New (March 2026): orderbook_fp with yes_dollars/no_dollars
+        # Old: orderbook with yes/no (cents)
+        ob = data.get("orderbook_fp") or data.get("orderbook") or {}
+        yes_levels = ob.get("yes_dollars") or ob.get("yes") or []
+        no_levels = ob.get("no_dollars") or ob.get("no") or []
 
-        # Kalshi format: [[price_cents, size], ...]
         def parse_levels(raw: list) -> list[OrderBookLevel]:
             out = []
             for lvl in raw:
                 try:
-                    price_cents, size = lvl[0], lvl[1]
+                    p_raw, s_raw = lvl[0], lvl[1]
+                    # New API: dollar strings ("0.55"); old: cents int (55)
+                    if isinstance(p_raw, str) or (isinstance(p_raw, (int, float)) and float(p_raw) <= 1):
+                        price = float(p_raw)
+                    else:
+                        price = float(p_raw) / 100.0
                     out.append(OrderBookLevel(
-                        price=float(price_cents) / 100.0,
-                        size=int(size),
+                        price=price,
+                        size=int(float(s_raw)),
                     ))
                 except (IndexError, ValueError, TypeError):
                     continue
-            # Sort yes bids descending (best first), yes asks ascending
             return out
 
-        yes_bids = sorted(parse_levels(yes_levels), key=lambda l: l.price, reverse=True)
-        no_bids = sorted(parse_levels(no_levels), key=lambda l: l.price, reverse=True)
+        yes_bids = sorted(parse_levels(yes_levels), key=lambda lvl: lvl.price, reverse=True)
+        no_bids = sorted(parse_levels(no_levels), key=lambda lvl: lvl.price, reverse=True)
 
         # Kalshi returns bid books; we synthesize asks from the other side:
         # the "yes ask" price = 1 - best NO bid price; the size is the NO depth
@@ -204,28 +207,45 @@ class KalshiAdapter(ExchangeAdapter):
         )
 
     def _parse_market(self, raw: dict) -> Market:
-        """Convert Kalshi API response to our Market model."""
-        # Kalshi v2 uses cent integers for prices in most fields;
-        # yes_bid/yes_ask/no_bid/no_ask on market objects are cents.
-        def cent_to_dollar(v) -> float:
+        """
+        Convert Kalshi API response to our Market model.
+
+        As of March 2026 migration, Kalshi switched to *_dollars string fields
+        and *_fp float fields, and removed the old integer-cent fields. We
+        prefer the new fields and fall back to legacy ones for compatibility.
+        """
+        def to_float(v) -> float:
             if v is None:
                 return 0.0
             try:
                 f = float(v)
-                return f / 100.0 if f > 1 else f
+                # Legacy: if value looks like cents (>1), convert
+                if f > 1.5 and not isinstance(v, str):
+                    return f / 100.0
+                return f
             except (TypeError, ValueError):
                 return 0.0
 
-        yes_bid = cent_to_dollar(raw.get("yes_bid"))
-        yes_ask = cent_to_dollar(raw.get("yes_ask")) or 1.0
-        no_bid = cent_to_dollar(raw.get("no_bid"))
-        no_ask = cent_to_dollar(raw.get("no_ask")) or 1.0
+        # New field names (post-March 2026)
+        yes_bid = to_float(raw.get("yes_bid_dollars") or raw.get("yes_bid"))
+        yes_ask = to_float(raw.get("yes_ask_dollars") or raw.get("yes_ask")) or 1.0
+        no_bid = to_float(raw.get("no_bid_dollars") or raw.get("no_bid"))
+        no_ask = to_float(raw.get("no_ask_dollars") or raw.get("no_ask")) or 1.0
 
-        # Clamp in case of bad data
+        # If asks are 0 or invalid, default to 1.0 (no ask = effectively unavailable)
+        if yes_ask <= 0:
+            yes_ask = 1.0
+        if no_ask <= 0:
+            no_ask = 1.0
+        # Clamp
         yes_ask = min(1.0, max(yes_ask, yes_bid))
         no_ask = min(1.0, max(no_ask, no_bid))
 
-        close_time: Optional[datetime] = None
+        # Volume / OI new fields
+        volume = int(float(raw.get("volume_fp") or raw.get("volume", 0) or 0))
+        oi = int(float(raw.get("open_interest_fp") or raw.get("open_interest", 0) or 0))
+
+        close_time: datetime | None = None
         if raw.get("close_time"):
             try:
                 close_time = datetime.fromisoformat(raw["close_time"].replace("Z", "+00:00"))
@@ -241,8 +261,8 @@ class KalshiAdapter(ExchangeAdapter):
             yes_ask=yes_ask,
             no_bid=no_bid,
             no_ask=no_ask,
-            volume=int(raw.get("volume", 0) or 0),
-            open_interest=int(raw.get("open_interest", 0) or 0),
+            volume=volume,
+            open_interest=oi,
             category=raw.get("category", "") or "",
             event_id=raw.get("event_ticker"),
             close_time=close_time,

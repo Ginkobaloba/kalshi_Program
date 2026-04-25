@@ -21,10 +21,10 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator, Optional
 
 from pm_bot.logger import get_logger
 
@@ -181,9 +181,9 @@ class Database:
         confidence: float,
         reasoning: str,
         outcome: str,
-        rejection_reason: Optional[str] = None,
+        rejection_reason: str | None = None,
         companion_count: int = 0,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> int:
         with self._conn() as conn:
             cur = conn.execute(
@@ -210,7 +210,7 @@ class Database:
         status: str,
         strategy: str = "",
         paper: bool = True,
-        exchange_order_id: Optional[str] = None,
+        exchange_order_id: str | None = None,
         notes: str = "",
     ) -> None:
         with self._conn() as conn:
@@ -230,7 +230,7 @@ class Database:
         status: str,
         filled_size: int = 0,
         avg_fill_price: float = 0.0,
-        exchange_order_id: Optional[str] = None,
+        exchange_order_id: str | None = None,
     ) -> None:
         with self._conn() as conn:
             conn.execute(
@@ -272,7 +272,7 @@ class Database:
         no_ask: float,
         volume: int,
         open_interest: int,
-        book: Optional[dict] = None,
+        book: dict | None = None,
     ) -> None:
         with self._conn() as conn:
             conn.execute(
@@ -283,7 +283,7 @@ class Database:
                  volume, open_interest, json.dumps(book) if book else None),
             )
 
-    def log_event(self, kind: str, message: str, metadata: Optional[dict] = None) -> None:
+    def log_event(self, kind: str, message: str, metadata: dict | None = None) -> None:
         with self._conn() as conn:
             conn.execute(
                 """INSERT INTO events (ts, kind, message, metadata_json)

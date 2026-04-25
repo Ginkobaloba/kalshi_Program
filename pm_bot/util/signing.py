@@ -17,7 +17,6 @@ import base64
 import time
 from functools import lru_cache
 from pathlib import Path
-from typing import Tuple
 
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -90,7 +89,7 @@ def timestamp_and_sign(
     private_key: rsa.RSAPrivateKey,
     method: str,
     path: str,
-) -> Tuple[str, str, str]:
+) -> tuple[str, str, str]:
     """Low-level: returns (key_id, timestamp, signature) tuple for reuse."""
     ts = str(int(time.time() * 1000))
     sig = sign_request(private_key, ts, method, path)

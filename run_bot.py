@@ -14,7 +14,6 @@ import argparse
 import signal
 import sys
 import time
-from typing import Optional
 
 from pm_bot.config import Config, load_config
 from pm_bot.exchanges.base import ExchangeAdapter
@@ -73,6 +72,9 @@ def build_adapters(cfg: Config) -> dict[Venue, ExchangeAdapter]:
         pus = PolymarketUSAdapter(
             api_key=cfg.secrets.polymarket_us_api_key,
             api_secret=cfg.secrets.polymarket_us_api_secret,
+            relayer_api_key=cfg.secrets.relayer_api_key,
+            relayer_api_key_address=cfg.secrets.relayer_api_key_address,
+            relayer_host=cfg.secrets.relayer_host,
             trading_enabled=cfg.exchanges.polymarket_us.trading_enabled and not paper,
         )
         adapters[Venue.POLYMARKET_US] = PaperAdapter(pus, cfg.risk.bankroll_usd) if paper else pus
@@ -99,7 +101,7 @@ def route_signal(
     db: Database,
     paper: bool,
     dry_run: bool,
-) -> Optional[Order]:
+) -> Order | None:
     """Run one signal through risk and place if accepted."""
     adapter = adapters.get(signal.venue)
     book = adapter.get_orderbook(signal.ticker) if adapter else None
@@ -191,7 +193,7 @@ def scan_cycle(
 
 def check_paper_fills(adapters: dict[Venue, ExchangeAdapter], db: Database) -> None:
     """In paper mode, poll for simulated fills on pending orders."""
-    for venue, adapter in adapters.items():
+    for _venue, adapter in adapters.items():
         if isinstance(adapter, PaperAdapter):
             fills = adapter.check_pending()
             for f in fills:
@@ -254,8 +256,7 @@ def main() -> int:
     try:
         while not _shutdown:
             n = scan_cycle(cfg, strategies, risk, adapters, db, args.dry)
-            if n:
-                log.info("Scan cycle routed %d orders.", n)
+            log.info("Scan cycle complete: %d orders routed", n)
             check_paper_fills(adapters, db)
 
             if args.once:
