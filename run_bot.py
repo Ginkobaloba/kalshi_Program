@@ -72,6 +72,9 @@ def build_adapters(cfg: Config) -> dict[Venue, ExchangeAdapter]:
         pus = PolymarketUSAdapter(
             api_key=cfg.secrets.polymarket_us_api_key,
             api_secret=cfg.secrets.polymarket_us_api_secret,
+            relayer_api_key=cfg.secrets.relayer_api_key,
+            relayer_api_key_address=cfg.secrets.relayer_api_key_address,
+            relayer_host=cfg.secrets.relayer_host,
             trading_enabled=cfg.exchanges.polymarket_us.trading_enabled and not paper,
         )
         adapters[Venue.POLYMARKET_US] = PaperAdapter(pus, cfg.risk.bankroll_usd) if paper else pus

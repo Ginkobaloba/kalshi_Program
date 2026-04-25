@@ -96,6 +96,12 @@ class Secrets(BaseModel):
     polymarket_us_api_key: str = ""
     polymarket_us_api_secret: str = ""
 
+    # Polymarket Relayer (gasless transactions). Sponsors gas; does NOT
+    # bypass the US geoblock on order placement.
+    relayer_api_key: str = ""
+    relayer_api_key_address: str = ""
+    relayer_host: str = "https://relayer-v2.polymarket.com/"
+
     @classmethod
     def from_env(cls) -> Secrets:
         return cls(
@@ -112,6 +118,9 @@ class Secrets(BaseModel):
             polymarket_api_passphrase=os.environ.get("POLYMARKET_API_PASSPHRASE", ""),
             polymarket_us_api_key=os.environ.get("POLYMARKET_US_API_KEY", ""),
             polymarket_us_api_secret=os.environ.get("POLYMARKET_US_API_SECRET", ""),
+            relayer_api_key=os.environ.get("RELAYER_API_KEY", ""),
+            relayer_api_key_address=os.environ.get("RELAYER_API_KEY_ADDRESS", ""),
+            relayer_host=os.environ.get("RELAYER_HOST", "https://relayer-v2.polymarket.com/"),
         )
 
 
