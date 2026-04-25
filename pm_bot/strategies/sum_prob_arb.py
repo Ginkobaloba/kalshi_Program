@@ -126,4 +126,8 @@ class SumProbArbStrategy(Strategy):
                 event_id, len(legs), sum_yes, edge_per_basket,
             )
 
+        log.info(
+            "sum_prob_arb scanned %d markets, %d multi-outcome events, %d candidates",
+            len(markets), len(groups), len(signals),
+        )
         return signals

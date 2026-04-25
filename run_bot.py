@@ -253,8 +253,7 @@ def main() -> int:
     try:
         while not _shutdown:
             n = scan_cycle(cfg, strategies, risk, adapters, db, args.dry)
-            if n:
-                log.info("Scan cycle routed %d orders.", n)
+            log.info("Scan cycle complete: %d orders routed", n)
             check_paper_fills(adapters, db)
 
             if args.once:

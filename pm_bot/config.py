@@ -136,8 +136,13 @@ def load_config(path: str | Path = "config.yaml") -> Config:
     with open(p, encoding="utf-8") as f:
         raw = yaml.safe_load(f) or {}
 
+    runtime_dict = raw.get("runtime") or {}
+    # Env var override for log level - useful for one-off DEBUG runs
+    if os.environ.get("LOG_LEVEL"):
+        runtime_dict["log_level"] = os.environ["LOG_LEVEL"]
+
     return Config(
-        runtime=RuntimeConfig(**(raw.get("runtime") or {})),
+        runtime=RuntimeConfig(**runtime_dict),
         exchanges=ExchangesConfig(**(raw.get("exchanges") or {})),
         risk=RiskConfig(**(raw.get("risk") or {})),
         strategies=StrategiesConfig(**(raw.get("strategies") or {})),
