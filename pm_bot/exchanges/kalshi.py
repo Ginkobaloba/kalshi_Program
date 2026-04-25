@@ -245,7 +245,7 @@ class KalshiAdapter(ExchangeAdapter):
         volume = int(float(raw.get("volume_fp") or raw.get("volume", 0) or 0))
         oi = int(float(raw.get("open_interest_fp") or raw.get("open_interest", 0) or 0))
 
-        close_time: Optional[datetime] = None
+        close_time: datetime | None = None
         if raw.get("close_time"):
             try:
                 close_time = datetime.fromisoformat(raw["close_time"].replace("Z", "+00:00"))

@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import sys
 import time
-from collections import defaultdict
 from pathlib import Path
 
 import requests

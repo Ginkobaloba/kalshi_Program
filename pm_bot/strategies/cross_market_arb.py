@@ -37,7 +37,7 @@ from pm_bot.exchanges.base import ExchangeAdapter
 from pm_bot.logger import get_logger
 from pm_bot.models import Action, Side, TradeSignal, Venue
 from pm_bot.strategies.base import Strategy
-from pm_bot.util.math import bps, kalshi_taker_fee, polymarket_fee
+from pm_bot.util.math import bps
 
 log = get_logger("cross_market_arb")
 

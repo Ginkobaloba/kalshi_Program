@@ -96,7 +96,7 @@ def main() -> int:
     print("-" * 110)
 
     arb_candidates = []
-    for idx, (ev, markets) in enumerate(candidates, 1):
+    for _idx, (ev, markets) in enumerate(candidates, 1):
         ticker = ev.get("event_ticker", "?")
         title = ev.get("title", "")[:45]
 

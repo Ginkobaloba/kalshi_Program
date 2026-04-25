@@ -23,10 +23,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sqlite3
 import sys
 import time
-from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -40,7 +40,6 @@ from pm_bot.exchanges.kalshi import KalshiAdapter
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
 
-import os
 DB_PATH = Path(os.environ.get("CROSS_SCAN_DB", str(Path(__file__).resolve().parents[1] / "data" / "cross_scan.db")))
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -163,7 +162,7 @@ def scan_pair(k: KalshiAdapter, pair: dict, conn: sqlite3.Connection,
     # Polymarket side
     pe = fetch_polymarket_event(pair["poly_keywords"])
     if not pe:
-        print(f"  Polymarket event not found", flush=True)
+        print("  Polymarket event not found", flush=True)
         return 0
 
     poly_data = {}
@@ -171,8 +170,10 @@ def scan_pair(k: KalshiAdapter, pair: dict, conn: sqlite3.Connection,
         name = (m.get("groupItemTitle") or m.get("question") or "").strip()
         tokens = m.get("clobTokenIds") or []
         if isinstance(tokens, str):
-            try: tokens = json.loads(tokens)
-            except: tokens = []
+            try:
+                tokens = json.loads(tokens)
+            except (ValueError, TypeError):
+                tokens = []
         if not tokens or not tokens[0]:
             continue
         time.sleep(THROTTLE)
