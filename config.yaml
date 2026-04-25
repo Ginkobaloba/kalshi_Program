@@ -118,12 +118,18 @@ strategies:
     max_inventory_contracts: 20
 
   news_signal:
-    # Signal-driven directional. Stub has one example (NOAA weather).
-    # Kalshi weather markets are mostly arb'd out — expect little.
-    enabled: false
+    # Reacts to news feeds (NBA injuries, etc.) and emits directional
+    # Kalshi signals when current price hasn't caught up to the news.
+    # Directional bets, not arb — calibrate impact estimates from data.
+    enabled: false                     # flip to true to start receiving signals
+    min_edge_cents: 2.0                # min gap (cents) to act
+    size_per_signal: 10
     sources:
+      espn_nba_injuries:
+        enabled: true                  # ESPN public injury feed
+        poll_interval_sec: 60
       noaa_weather:
-        enabled: false
+        enabled: false                 # Kalshi weather markets mostly arb'd out
         cities: [nyc, chicago, miami, austin, la]
       fred_econ:
         enabled: false
