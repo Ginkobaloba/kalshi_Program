@@ -1,0 +1,53 @@
+# systemd unit file for pm_bot
+#
+# Install:
+#   sudo cp deploy/pm_bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable pm_bot
+#   sudo systemctl start pm_bot
+#
+# Inspect:
+#   sudo systemctl status pm_bot
+#   journalctl -u pm_bot -f      # follow logs
+#
+# Stop:
+#   sudo systemctl stop pm_bot
+
+[Unit]
+Description=pm_bot prediction market trading bot
+Documentation=https://github.com/Ginkobaloba/kalshi_program
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pmbot
+Group=pmbot
+WorkingDirectory=/opt/kalshi_program
+EnvironmentFile=/opt/kalshi_program/.env
+ExecStart=/opt/kalshi_program/.venv/bin/python /opt/kalshi_program/run_bot.py
+
+# Restart policy — back off if it crashes too fast
+Restart=on-failure
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Resource limits — bot shouldn't need much
+LimitNOFILE=4096
+MemoryMax=512M
+CPUQuota=25%
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/kalshi_program/data /opt/kalshi_program/logs
+
+# Graceful shutdown — give bot 30s to cancel orders before SIGKILL
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
