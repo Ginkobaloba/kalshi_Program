@@ -45,7 +45,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Wait for CI completion
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.7.0
         with:
           ref: ${{ github.sha }}
           check-name: 'Tests (3.11)'
