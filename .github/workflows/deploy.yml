@@ -43,7 +43,7 @@ jobs:
     name: Verify CI passed
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Wait for CI completion
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
