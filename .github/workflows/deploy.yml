@@ -61,7 +61,7 @@ jobs:
       name: paper      # see GitHub repo Settings -> Environments
     steps:
       - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.PAPER_VPS_SSH_KEY }}
 
@@ -95,7 +95,7 @@ jobs:
       name: live       # set up in GitHub UI with required-reviewers protection
     steps:
       - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: ${{ secrets.LIVE_VPS_SSH_KEY }}
 
