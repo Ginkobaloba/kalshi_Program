@@ -1,0 +1,15 @@
+# git-blame ignore list
+#
+# This file lists commits that should be ignored by `git blame` because
+# they are pure, mechanical reformatting and not meaningful content
+# changes. Ignoring them keeps blame pointing at the commit that
+# actually introduced a line's logic, instead of the reformat commit.
+#
+# This file alone does nothing: git only reads it when you tell it to,
+# either per-invocation with `git blame --ignore-revs-file
+# .git-blame-ignore-revs`, or persistently with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub's web blame view also honors this file automatically.
+
+# style: format with black (24 files, pm_bot/run_bot.py/scripts/tests)
+c370d546b3f7474e0df095cb69da892bf68cfcbd

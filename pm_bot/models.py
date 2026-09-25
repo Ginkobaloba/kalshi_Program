@@ -29,9 +29,9 @@ class OrderType(str, Enum):
 
 
 class OrderStatus(str, Enum):
-    PENDING = "pending"         # submitted, not yet accepted
-    OPEN = "open"               # resting on book
-    PARTIAL = "partial"         # partially filled
+    PENDING = "pending"  # submitted, not yet accepted
+    OPEN = "open"  # resting on book
+    PARTIAL = "partial"  # partially filled
     FILLED = "filled"
     CANCELED = "canceled"
     REJECTED = "rejected"
@@ -39,23 +39,26 @@ class OrderStatus(str, Enum):
 
 class Venue(str, Enum):
     """Which exchange a market lives on."""
+
     KALSHI = "kalshi"
-    POLYMARKET = "polymarket"       # international
-    POLYMARKET_US = "polymarket_us" # QCX, CFTC-regulated
-    PAPER = "paper"                  # paper-trade shim
+    POLYMARKET = "polymarket"  # international
+    POLYMARKET_US = "polymarket_us"  # QCX, CFTC-regulated
+    PAPER = "paper"  # paper-trade shim
 
 
 # ------------------------------------------------------------------------
 # Market data
 # ------------------------------------------------------------------------
 
+
 class Market(BaseModel):
     """A single binary contract."""
+
     venue: Venue
-    ticker: str                      # exchange-native id (Kalshi ticker, Poly token_id, etc.)
+    ticker: str  # exchange-native id (Kalshi ticker, Poly token_id, etc.)
     title: str
     subtitle: str = ""
-    yes_bid: float = 0.0             # best yes bid in dollars (0..1)
+    yes_bid: float = 0.0  # best yes bid in dollars (0..1)
     yes_ask: float = 1.0
     no_bid: float = 0.0
     no_ask: float = 1.0
@@ -63,7 +66,7 @@ class Market(BaseModel):
     open_interest: int = 0
     category: str = ""
     close_time: datetime | None = None
-    event_id: str | None = None   # groups related markets (multi-outcome events)
+    event_id: str | None = None  # groups related markets (multi-outcome events)
     status: str = "open"
 
     @property
@@ -87,8 +90,8 @@ class Market(BaseModel):
 
 
 class OrderBookLevel(BaseModel):
-    price: float                     # dollars, 0..1
-    size: int                        # contracts at this level
+    price: float  # dollars, 0..1
+    size: int  # contracts at this level
 
 
 class OrderBook(BaseModel):
@@ -121,45 +124,49 @@ class OrderBook(BaseModel):
 # Trading
 # ------------------------------------------------------------------------
 
+
 class Order(BaseModel):
     """An order we've placed (or intend to place)."""
+
     venue: Venue
     ticker: str
     side: Side
     action: Action
     order_type: OrderType = OrderType.LIMIT
-    price: float                     # dollars, 0..1
-    size: int                        # number of contracts
-    client_order_id: str             # our unique id
+    price: float  # dollars, 0..1
+    size: int  # number of contracts
+    client_order_id: str  # our unique id
     exchange_order_id: str | None = None
     status: OrderStatus = OrderStatus.PENDING
     filled_size: int = 0
     avg_fill_price: float = 0.0
-    strategy: str = ""               # which strategy submitted it
+    strategy: str = ""  # which strategy submitted it
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    notes: str = ""                  # free-form, for debugging
+    notes: str = ""  # free-form, for debugging
 
 
 class Fill(BaseModel):
     """A partial or full execution of an order."""
+
     venue: Venue
     ticker: str
-    order_id: str                    # client_order_id
+    order_id: str  # client_order_id
     side: Side
     action: Action
     price: float
     size: int
-    fee: float = 0.0                 # in dollars
+    fee: float = 0.0  # in dollars
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Position(BaseModel):
     """Net position on a single market."""
+
     venue: Venue
     ticker: str
     side: Side
-    size: int                        # positive = long; 0 means flat
+    size: int  # positive = long; 0 means flat
     avg_entry_price: float
     realized_pnl: float = 0.0
     unrealized_pnl: float = 0.0
@@ -173,17 +180,19 @@ class Position(BaseModel):
 # Strategy signals
 # ------------------------------------------------------------------------
 
+
 class TradeSignal(BaseModel):
     """A strategy's proposed trade. Risk manager decides whether to route it."""
+
     strategy: str
     venue: Venue
     ticker: str
     side: Side
     action: Action
     price: float
-    size: int                        # suggested size; risk mgr may reduce
-    edge_bps: int                    # estimated after-fee edge in basis points
-    confidence: float = 0.5          # 0..1
+    size: int  # suggested size; risk mgr may reduce
+    edge_bps: int  # estimated after-fee edge in basis points
+    confidence: float = 0.5  # 0..1
     reasoning: str = ""
     # For multi-leg strategies: companion legs that must all fill or none.
     companion_signals: list[TradeSignal] = Field(default_factory=list)

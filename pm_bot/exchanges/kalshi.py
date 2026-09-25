@@ -44,10 +44,10 @@ DEMO_BASE = "https://demo-api.kalshi.co/trade-api/v2"
 
 # Per-tier rate limits (reads/sec, writes/sec) as of April 2026
 RATE_LIMITS = {
-    "basic":    (20, 10),
+    "basic": (20, 10),
     "advanced": (30, 30),
-    "premier":  (100, 100),
-    "prime":    (400, 400),
+    "premier": (100, 100),
+    "prime": (400, 400),
 }
 
 
@@ -72,11 +72,13 @@ class KalshiAdapter(ExchangeAdapter):
         self._last_write = 0.0
 
         self.session = requests.Session()
-        self.session.headers.update({
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "User-Agent": "pm_bot/0.2.0",
-        })
+        self.session.headers.update(
+            {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "User-Agent": "pm_bot/0.2.0",
+            }
+        )
 
     # ----- internal helpers -----------------------------------------------
 
@@ -112,9 +114,9 @@ class KalshiAdapter(ExchangeAdapter):
                 )
             # Signing path includes the full /trade-api/v2/... portion
             sign_path = path if path.startswith("/trade-api") else f"/trade-api/v2{path}"
-            headers.update(build_auth_headers(
-                self.api_key_id, self.private_key_path, method, sign_path
-            ))
+            headers.update(
+                build_auth_headers(self.api_key_id, self.private_key_path, method, sign_path)
+            )
         resp = self.session.request(
             method, url, params=params, json=body, headers=headers, timeout=15
         )
@@ -153,9 +155,7 @@ class KalshiAdapter(ExchangeAdapter):
 
     def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None:
         try:
-            data = self._request(
-                "GET", f"/markets/{ticker}/orderbook", params={"depth": depth}
-            )
+            data = self._request("GET", f"/markets/{ticker}/orderbook", params={"depth": depth})
         except requests.HTTPError as e:
             if e.response is not None and e.response.status_code == 404:
                 return None
@@ -173,14 +173,18 @@ class KalshiAdapter(ExchangeAdapter):
                 try:
                     p_raw, s_raw = lvl[0], lvl[1]
                     # New API: dollar strings ("0.55"); old: cents int (55)
-                    if isinstance(p_raw, str) or (isinstance(p_raw, (int, float)) and float(p_raw) <= 1):
+                    if isinstance(p_raw, str) or (
+                        isinstance(p_raw, (int, float)) and float(p_raw) <= 1
+                    ):
                         price = float(p_raw)
                     else:
                         price = float(p_raw) / 100.0
-                    out.append(OrderBookLevel(
-                        price=price,
-                        size=int(float(s_raw)),
-                    ))
+                    out.append(
+                        OrderBookLevel(
+                            price=price,
+                            size=int(float(s_raw)),
+                        )
+                    )
                 except (IndexError, ValueError, TypeError):
                     continue
             return out
@@ -190,12 +194,8 @@ class KalshiAdapter(ExchangeAdapter):
 
         # Kalshi returns bid books; we synthesize asks from the other side:
         # the "yes ask" price = 1 - best NO bid price; the size is the NO depth
-        yes_asks = [
-            OrderBookLevel(price=1.0 - lvl.price, size=lvl.size) for lvl in no_bids
-        ]
-        no_asks = [
-            OrderBookLevel(price=1.0 - lvl.price, size=lvl.size) for lvl in yes_bids
-        ]
+        yes_asks = [OrderBookLevel(price=1.0 - lvl.price, size=lvl.size) for lvl in no_bids]
+        no_asks = [OrderBookLevel(price=1.0 - lvl.price, size=lvl.size) for lvl in yes_bids]
 
         return OrderBook(
             venue=self.venue,
@@ -214,6 +214,7 @@ class KalshiAdapter(ExchangeAdapter):
         and *_fp float fields, and removed the old integer-cent fields. We
         prefer the new fields and fall back to legacy ones for compatibility.
         """
+
         def to_float(v) -> float:
             if v is None:
                 return 0.0
@@ -277,8 +278,7 @@ class KalshiAdapter(ExchangeAdapter):
     def place_order(self, order: Order) -> Order:
         if not self.trading_enabled:
             raise RuntimeError(
-                "Kalshi trading not enabled. Set trading_enabled=True and "
-                "provide credentials."
+                "Kalshi trading not enabled. Set trading_enabled=True and " "provide credentials."
             )
 
         body = {
@@ -302,9 +302,14 @@ class KalshiAdapter(ExchangeAdapter):
             order.exchange_order_id = o.get("order_id")
             order.status = OrderStatus.OPEN
             order.updated_at = datetime.utcnow()
-            log.info("Kalshi order placed: %s %s %d @ %.2f on %s",
-                     order.action.value, order.side.value, order.size,
-                     order.price, order.ticker)
+            log.info(
+                "Kalshi order placed: %s %s %d @ %.2f on %s",
+                order.action.value,
+                order.side.value,
+                order.size,
+                order.price,
+                order.ticker,
+            )
         except requests.HTTPError as e:
             order.status = OrderStatus.REJECTED
             order.notes = f"HTTP {e.response.status_code}: {e.response.text if e.response else ''}"
@@ -334,14 +339,18 @@ class KalshiAdapter(ExchangeAdapter):
             net = int(p.get("position", 0))
             if net == 0:
                 continue
-            positions.append(Position(
-                venue=self.venue,
-                ticker=p.get("ticker", ""),
-                side=Side.YES if net > 0 else Side.NO,
-                size=abs(net),
-                avg_entry_price=float(p.get("market_exposure", 0)) / (abs(net) * 100) if net else 0.0,
-                realized_pnl=float(p.get("realized_pnl", 0)) / 100.0,
-            ))
+            positions.append(
+                Position(
+                    venue=self.venue,
+                    ticker=p.get("ticker", ""),
+                    side=Side.YES if net > 0 else Side.NO,
+                    size=abs(net),
+                    avg_entry_price=(
+                        float(p.get("market_exposure", 0)) / (abs(net) * 100) if net else 0.0
+                    ),
+                    realized_pnl=float(p.get("realized_pnl", 0)) / 100.0,
+                )
+            )
         return positions
 
     def get_balance(self) -> float:

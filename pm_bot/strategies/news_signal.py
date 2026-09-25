@@ -56,11 +56,13 @@ class NewsSignalStrategy(Strategy):
         # Build active feed list based on config
         espn_cfg = self.sources.get("espn_nba_injuries", {}) or {}
         if espn_cfg.get("enabled"):
-            self._feeds.append({
-                "feed": ESPNInjuriesFeed(),
-                "interval": float(espn_cfg.get("poll_interval_sec", 60)),
-                "matcher": "nba_injury",
-            })
+            self._feeds.append(
+                {
+                    "feed": ESPNInjuriesFeed(),
+                    "interval": float(espn_cfg.get("poll_interval_sec", 60)),
+                    "matcher": "nba_injury",
+                }
+            )
             log.info("news_signal: ESPN NBA injuries feed enabled")
 
     def scan(self) -> list[TradeSignal]:
@@ -118,7 +120,11 @@ class NewsSignalStrategy(Strategy):
         if abs(impact) < self.min_edge_cents:
             log.debug(
                 "news_signal: %s status %s->%s impact=%.1fc (below threshold %.1fc)",
-                player_name, status_from, status_to, impact, self.min_edge_cents,
+                player_name,
+                status_from,
+                status_to,
+                impact,
+                self.min_edge_cents,
             )
             return None
 
@@ -141,7 +147,10 @@ class NewsSignalStrategy(Strategy):
         if actionable_gap_cents < self.min_edge_cents:
             log.debug(
                 "news_signal: %s gap %.1fc below threshold (current_bid=%.3f implied=%.3f)",
-                game["ticker"], actionable_gap_cents, current_yes_bid, implied_new_yes,
+                game["ticker"],
+                actionable_gap_cents,
+                current_yes_bid,
+                implied_new_yes,
             )
             return None
 
@@ -167,7 +176,12 @@ class NewsSignalStrategy(Strategy):
         )
         log.info(
             "news_signal SIGNAL: %s | %s %s->%s | gap=%.1fc | %s @ %.3f",
-            game["ticker"], player_name, status_from, status_to,
-            actionable_gap_cents, "BUY NO", sig_price,
+            game["ticker"],
+            player_name,
+            status_from,
+            status_to,
+            actionable_gap_cents,
+            "BUY NO",
+            sig_price,
         )
         return sig

@@ -34,35 +34,29 @@ class ExchangeAdapter(abc.ABC):
         status: str = "open",
         limit: int = 200,
         event_id: str | None = None,
-    ) -> list[Market]:
-        ...
+    ) -> list[Market]: ...
 
     @abc.abstractmethod
-    def get_market(self, ticker: str) -> Market | None:
-        ...
+    def get_market(self, ticker: str) -> Market | None: ...
 
     @abc.abstractmethod
-    def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None:
-        ...
+    def get_orderbook(self, ticker: str, depth: int = 10) -> OrderBook | None: ...
 
     # ----- trading path ---------------------------------------------------
     # Adapters that don't support trading raise ComplianceError.
 
     @abc.abstractmethod
-    def supports_trading(self) -> bool:
-        ...
+    def supports_trading(self) -> bool: ...
 
     @abc.abstractmethod
     def place_order(self, order: Order) -> Order:
         """Submit an order. Returns the updated Order (with exchange id + status)."""
 
     @abc.abstractmethod
-    def cancel_order(self, client_order_id: str) -> bool:
-        ...
+    def cancel_order(self, client_order_id: str) -> bool: ...
 
     @abc.abstractmethod
-    def get_positions(self) -> list[Position]:
-        ...
+    def get_positions(self) -> list[Position]: ...
 
     @abc.abstractmethod
     def get_balance(self) -> float:

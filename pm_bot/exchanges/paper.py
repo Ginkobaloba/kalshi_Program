@@ -179,8 +179,7 @@ class PaperAdapter(ExchangeAdapter):
         order.filled_size += fillable
         order.avg_fill_price = fill_price
         order.status = (
-            OrderStatus.FILLED if order.filled_size >= order.size
-            else OrderStatus.PARTIAL
+            OrderStatus.FILLED if order.filled_size >= order.size else OrderStatus.PARTIAL
         )
 
     def _apply_position(self, ticker: str, side: Side, delta: int, price: float) -> None:
@@ -189,8 +188,11 @@ class PaperAdapter(ExchangeAdapter):
             if delta == 0:
                 return
             self._positions[ticker] = Position(
-                venue=self.venue, ticker=ticker, side=side,
-                size=abs(delta), avg_entry_price=price,
+                venue=self.venue,
+                ticker=ticker,
+                side=side,
+                size=abs(delta),
+                avg_entry_price=price,
             )
             return
         # Update weighted average entry
@@ -198,7 +200,8 @@ class PaperAdapter(ExchangeAdapter):
             new_size = pos.size + abs(delta)
             pos.avg_entry_price = (
                 (pos.avg_entry_price * pos.size + price * abs(delta)) / new_size
-                if new_size > 0 else 0.0
+                if new_size > 0
+                else 0.0
             )
             pos.size = new_size
         else:

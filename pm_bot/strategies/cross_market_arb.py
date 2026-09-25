@@ -118,10 +118,12 @@ class CrossMarketArbStrategy(Strategy):
                 elif "kalshi_ticker" in pair:
                     signals.extend(self._scan_legacy_single(pair))
             except Exception as e:
-                log.warning("pair scan failed (%s): %s",
-                           pair.get("name", "?"), e)
-        log.info("cross_market_arb scanned %d pairs, emitted %d signals",
-                len(self._event_map), len(signals))
+                log.warning("pair scan failed (%s): %s", pair.get("name", "?"), e)
+        log.info(
+            "cross_market_arb scanned %d pairs, emitted %d signals",
+            len(self._event_map),
+            len(signals),
+        )
         return signals
 
     # ------------------------------------------------------------------
@@ -189,22 +191,32 @@ class CrossMarketArbStrategy(Strategy):
                 cost_a = match["ask"] + (1 - kv["yes_bid"])
                 edge_a_cents = (1 - cost_a) * 100
                 if edge_a_cents >= self.min_gap_cents:
-                    signals.extend(self._make_pair_signals(
-                        pair_name, kv, match, match_name,
-                        direction="P_YES+K_NO",
-                        edge_cents=edge_a_cents,
-                    ))
+                    signals.extend(
+                        self._make_pair_signals(
+                            pair_name,
+                            kv,
+                            match,
+                            match_name,
+                            direction="P_YES+K_NO",
+                            edge_cents=edge_a_cents,
+                        )
+                    )
 
             # Direction B: BUY K_YES + BUY P_NO
             if kv["yes_ask"] > 0 and kv["yes_ask"] < 1 and match["bid"] > 0:
                 cost_b = kv["yes_ask"] + (1 - match["bid"])
                 edge_b_cents = (1 - cost_b) * 100
                 if edge_b_cents >= self.min_gap_cents:
-                    signals.extend(self._make_pair_signals(
-                        pair_name, kv, match, match_name,
-                        direction="K_YES+P_NO",
-                        edge_cents=edge_b_cents,
-                    ))
+                    signals.extend(
+                        self._make_pair_signals(
+                            pair_name,
+                            kv,
+                            match,
+                            match_name,
+                            direction="K_YES+P_NO",
+                            edge_cents=edge_b_cents,
+                        )
+                    )
 
         return signals
 
@@ -386,17 +398,29 @@ class CrossMarketArbStrategy(Strategy):
             cost = match["ask"] + (1 - kv["yes_bid"])
             edge = (1 - cost) * 100
             if edge >= self.min_gap_cents:
-                signals.extend(self._make_pair_signals(
-                    pair.get("name", k_ticker), kv, match, p_token,
-                    direction="P_YES+K_NO", edge_cents=edge,
-                ))
+                signals.extend(
+                    self._make_pair_signals(
+                        pair.get("name", k_ticker),
+                        kv,
+                        match,
+                        p_token,
+                        direction="P_YES+K_NO",
+                        edge_cents=edge,
+                    )
+                )
         # Direction B
         if kv["yes_ask"] > 0 and kv["yes_ask"] < 1 and match["bid"] > 0:
             cost = kv["yes_ask"] + (1 - match["bid"])
             edge = (1 - cost) * 100
             if edge >= self.min_gap_cents:
-                signals.extend(self._make_pair_signals(
-                    pair.get("name", k_ticker), kv, match, p_token,
-                    direction="K_YES+P_NO", edge_cents=edge,
-                ))
+                signals.extend(
+                    self._make_pair_signals(
+                        pair.get("name", k_ticker),
+                        kv,
+                        match,
+                        p_token,
+                        direction="K_YES+P_NO",
+                        edge_cents=edge,
+                    )
+                )
         return signals
