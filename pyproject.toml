@@ -93,6 +93,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E402"]
 
+# .git-blame-ignore-revs at the repo root lists mechanical reformat
+# commits (e.g. the black formatting pass) so `git blame` skips them.
+# Run `git config blame.ignoreRevsFile .git-blame-ignore-revs` once
+# locally to make it take effect; the file alone does nothing.
 [tool.black]
 line-length = 100
 target-version = ["py310", "py311", "py312"]

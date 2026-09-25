@@ -115,31 +115,31 @@ class ESPNInjuriesFeed(NewsFeed):
                 ts = datetime.now(timezone.utc)
                 if espn_date:
                     try:
-                        ts = datetime.fromisoformat(
-                            espn_date.replace("Z", "+00:00")
-                        )
+                        ts = datetime.fromisoformat(espn_date.replace("Z", "+00:00"))
                     except ValueError:
                         pass
 
-                items.append(NewsItem(
-                    text=(
-                        f"{player_name} ({team_abbr}) status: "
-                        f"{prior_status or 'unknown'} -> {status}"
-                    ),
-                    timestamp=ts,
-                    source=self.name,
-                    severity=severity,
-                    tags={
-                        "player_id": player_id,
-                        "player_name": player_name,
-                        "team_name": team_name,
-                        "team_abbr": team_abbr,
-                        "status_from": prior_status,
-                        "status_to": status,
-                    },
-                    raw={"description": description, "espn_inj": inj},
-                    item_id=f"espn-inj-{player_id}-{status}",
-                ))
+                items.append(
+                    NewsItem(
+                        text=(
+                            f"{player_name} ({team_abbr}) status: "
+                            f"{prior_status or 'unknown'} -> {status}"
+                        ),
+                        timestamp=ts,
+                        source=self.name,
+                        severity=severity,
+                        tags={
+                            "player_id": player_id,
+                            "player_name": player_name,
+                            "team_name": team_name,
+                            "team_abbr": team_abbr,
+                            "status_from": prior_status,
+                            "status_to": status,
+                        },
+                        raw={"description": description, "espn_inj": inj},
+                        item_id=f"espn-inj-{player_id}-{status}",
+                    )
+                )
 
         if not self._primed:
             log.info("ESPN injuries: primed with %d players, no items emitted", len(self._seen))
@@ -153,7 +153,7 @@ class ESPNInjuriesFeed(NewsFeed):
     def _extract_player_id(athlete: dict) -> str:
         """ESPN buries the player id in the playercard link URL.
         Returns empty string if not found."""
-        for link in (athlete.get("links") or []):
+        for link in athlete.get("links") or []:
             href = link.get("href") or ""
             # e.g. https://www.espn.com/nba/player/_/id/4585618/keshon-gilbert
             if "/id/" in href:

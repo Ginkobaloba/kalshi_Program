@@ -37,9 +37,7 @@ def load_private_key(path: str) -> rsa.RSAPrivateKey:
         key = serialization.load_pem_private_key(f.read(), password=None)
 
     if not isinstance(key, rsa.RSAPrivateKey):
-        raise ValueError(
-            f"Expected RSA private key in {path}, got {type(key).__name__}"
-        )
+        raise ValueError(f"Expected RSA private key in {path}, got {type(key).__name__}")
     return key
 
 

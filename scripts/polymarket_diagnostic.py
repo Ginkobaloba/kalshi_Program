@@ -136,6 +136,7 @@ def main() -> int:
             if isinstance(tokens, str):
                 # Sometimes returned as JSON string
                 import json as _json
+
                 try:
                     tokens = _json.loads(tokens)
                 except Exception:
@@ -172,8 +173,10 @@ def main() -> int:
         print(f"\n=== {len(arb_candidates)} POLYMARKET ARB CANDIDATE(S) ===")
         for title, total, n, vol in arb_candidates:
             edge = (total - 1) * 100
-            print(f"  ${edge:5.2f} per 100-basket  sum(YES)={total:.3f}  "
-                  f"{n} legs  vol=${vol:,.0f}  {title}")
+            print(
+                f"  ${edge:5.2f} per 100-basket  sum(YES)={total:.3f}  "
+                f"{n} legs  vol=${vol:,.0f}  {title}"
+            )
     else:
         print("\nNo arb candidates with sum > 1.03 in this sample.")
         print("Polymarket's documented arb opportunities are typically in")

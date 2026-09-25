@@ -61,7 +61,7 @@ def file_age_seconds(p: Path) -> float | None:
     """Seconds since file was last modified, or None if missing."""
     if not p.exists():
         return None
-    return (datetime.now().timestamp() - p.stat().st_mtime)
+    return datetime.now().timestamp() - p.stat().st_mtime
 
 
 # Header ----------------------------------------------------------------
@@ -102,19 +102,23 @@ n_sig = int(sig_today["n"].iloc[0]) if not sig_today.empty else 0
 status_cols[2].metric("signals today", n_sig)
 
 # Total candidates today (cross scanner)
-cand_today = query(CROSS_SCAN_DB, "SELECT COUNT(*) AS n FROM candidates WHERE ts LIKE ?", (f"{today}%",))
+cand_today = query(
+    CROSS_SCAN_DB, "SELECT COUNT(*) AS n FROM candidates WHERE ts LIKE ?", (f"{today}%",)
+)
 n_cand = int(cand_today["n"].iloc[0]) if not cand_today.empty else 0
 status_cols[3].metric("candidates today", n_cand)
 
 
 # Tabs ------------------------------------------------------------------
 
-tab_cross, tab_bot, tab_pnl, tab_raw = st.tabs([
-    "🔀 Cross-exchange",
-    "🤖 Bot signals",
-    "💰 P&L",
-    "🗃 Raw data",
-])
+tab_cross, tab_bot, tab_pnl, tab_raw = st.tabs(
+    [
+        "🔀 Cross-exchange",
+        "🤖 Bot signals",
+        "💰 P&L",
+        "🗃 Raw data",
+    ]
+)
 
 # ----- Cross-exchange tab ---------------------------------------------
 
@@ -130,7 +134,9 @@ with tab_cross:
            LIMIT 100""",
     )
     if candidates.empty:
-        st.info("No candidates logged yet. Run `python scripts/cross_exchange_scanner.py` to start collecting.")
+        st.info(
+            "No candidates logged yet. Run `python scripts/cross_exchange_scanner.py` to start collecting."
+        )
     else:
         candidates["ts"] = pd.to_datetime(candidates["ts"])
         st.dataframe(candidates, use_container_width=True, hide_index=True)
@@ -258,8 +264,9 @@ with tab_pnl:
             .groupby("strategy")["realized_pnl"]
             .cumsum()
             .reset_index()
-            .merge(pnl[["day", "strategy"]].reset_index(), left_on="index", right_index=True)
-            [["day", "strategy", "realized_pnl"]]
+            .merge(pnl[["day", "strategy"]].reset_index(), left_on="index", right_index=True)[
+                ["day", "strategy", "realized_pnl"]
+            ]
             .pivot(index="day", columns="strategy", values="realized_pnl")
         )
         st.line_chart(cumulative, height=350)

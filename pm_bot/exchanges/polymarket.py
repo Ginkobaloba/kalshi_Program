@@ -56,10 +56,12 @@ class PolymarketAdapter(ExchangeAdapter):
         self._compliance = compliance_acknowledged
         self._last_req = 0.0
         self.session = requests.Session()
-        self.session.headers.update({
-            "Accept": "application/json",
-            "User-Agent": "pm_bot/0.2.0",
-        })
+        self.session.headers.update(
+            {
+                "Accept": "application/json",
+                "User-Agent": "pm_bot/0.2.0",
+            }
+        )
 
     def _throttle(self) -> None:
         """Gamma API allows 4000/10s; we rate-limit at ~5/s to be polite."""
@@ -130,18 +132,20 @@ class PolymarketAdapter(ExchangeAdapter):
             out: list[OrderBookLevel] = []
             for r in (rows or [])[:limit]:
                 try:
-                    out.append(OrderBookLevel(
-                        price=float(r.get("price", 0)),
-                        size=int(float(r.get("size", 0))),
-                    ))
+                    out.append(
+                        OrderBookLevel(
+                            price=float(r.get("price", 0)),
+                            size=int(float(r.get("size", 0))),
+                        )
+                    )
                 except (ValueError, TypeError):
                     continue
             return out
 
-        yes_bids = sorted(to_levels(data.get("bids", []), depth),
-                          key=lambda lvl: lvl.price, reverse=True)
-        yes_asks = sorted(to_levels(data.get("asks", []), depth),
-                          key=lambda lvl: lvl.price)
+        yes_bids = sorted(
+            to_levels(data.get("bids", []), depth), key=lambda lvl: lvl.price, reverse=True
+        )
+        yes_asks = sorted(to_levels(data.get("asks", []), depth), key=lambda lvl: lvl.price)
 
         # NO side is derived: NO bid at price p <=> YES ask at (1-p)
         no_bids = [OrderBookLevel(price=1 - lvl.price, size=lvl.size) for lvl in yes_asks]
@@ -168,6 +172,7 @@ class PolymarketAdapter(ExchangeAdapter):
             prices = raw.get("outcomePrices") or "[]"
             if isinstance(prices, str):
                 import json as _json
+
                 prices = _json.loads(prices)
             if prices:
                 yes_price = float(prices[0])

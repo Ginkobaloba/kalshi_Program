@@ -40,10 +40,18 @@ from pm_bot.exchanges.kalshi import KalshiAdapter
 GAMMA = "https://gamma-api.polymarket.com"
 CLOB = "https://clob.polymarket.com"
 
-DB_PATH = Path(os.environ.get("CROSS_SCAN_DB", str(Path(__file__).resolve().parents[1] / "data" / "cross_scan.db")))
+DB_PATH = Path(
+    os.environ.get(
+        "CROSS_SCAN_DB", str(Path(__file__).resolve().parents[1] / "data" / "cross_scan.db")
+    )
+)
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-EVENT_MAP_PATH = Path(__import__("os").environ.get("EVENT_MAP_PATH", str(Path(__file__).resolve().parents[1] / "config" / "event_map.yaml")))
+EVENT_MAP_PATH = Path(
+    __import__("os").environ.get(
+        "EVENT_MAP_PATH", str(Path(__file__).resolve().parents[1] / "config" / "event_map.yaml")
+    )
+)
 
 THROTTLE = 0.4  # 2.5 req/sec, well under both exchanges' limits
 
@@ -95,7 +103,9 @@ def now_iso() -> str:
 
 
 def fetch_polymarket_event(keywords: list[str]) -> dict | None:
-    r = requests.get(f"{GAMMA}/events", params={"limit": 500, "active": "true", "closed": "false"}, timeout=10)
+    r = requests.get(
+        f"{GAMMA}/events", params={"limit": 500, "active": "true", "closed": "false"}, timeout=10
+    )
     if not r.ok:
         return None
     events = r.json() if isinstance(r.json(), list) else []
@@ -124,8 +134,9 @@ def words(s: str) -> set[str]:
     return {w.lower() for w in (s or "").split() if len(w) > 3}
 
 
-def scan_pair(k: KalshiAdapter, pair: dict, conn: sqlite3.Connection,
-              edge_threshold_cents: float = 1.0) -> int:
+def scan_pair(
+    k: KalshiAdapter, pair: dict, conn: sqlite3.Connection, edge_threshold_cents: float = 1.0
+) -> int:
     """Scan one pair, log to DB, return number of candidates found."""
     ts = now_iso()
     pair_name = pair["name"]
@@ -217,8 +228,18 @@ def scan_pair(k: KalshiAdapter, pair: dict, conn: sqlite3.Connection,
                kalshi_bid, kalshi_ask, kalshi_ticker,
                edge_PYK_NO_cents, edge_KYP_NO_cents)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (ts, pair_name, match_name or k_team, match["bid"], match["ask"],
-             kv["bid"], kv["ask"], kv["ticker"], edge_A, edge_B),
+            (
+                ts,
+                pair_name,
+                match_name or k_team,
+                match["bid"],
+                match["ask"],
+                kv["bid"],
+                kv["ask"],
+                kv["ticker"],
+                edge_A,
+                edge_B,
+            ),
         )
         n_compared += 1
 
@@ -228,20 +249,42 @@ def scan_pair(k: KalshiAdapter, pair: dict, conn: sqlite3.Connection,
                 """INSERT INTO candidates (ts, pair_name, leg_name, direction,
                    edge_cents, poly_price, kalshi_price, kalshi_ticker)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (ts, pair_name, match_name or k_team, "P_YES+K_NO", edge_A,
-                 match["ask"], kv["bid"], kv["ticker"]),
+                (
+                    ts,
+                    pair_name,
+                    match_name or k_team,
+                    "P_YES+K_NO",
+                    edge_A,
+                    match["ask"],
+                    kv["bid"],
+                    kv["ticker"],
+                ),
             )
-            print(f"  *** {match_name or k_team}: EDGE={edge_A:.2f}c  (P_YES@{match['ask']:.3f} + K_NO@{1-kv['bid']:.3f})", flush=True)
+            print(
+                f"  *** {match_name or k_team}: EDGE={edge_A:.2f}c  (P_YES@{match['ask']:.3f} + K_NO@{1-kv['bid']:.3f})",
+                flush=True,
+            )
             n_candidates += 1
         if edge_B >= edge_threshold_cents:
             conn.execute(
                 """INSERT INTO candidates (ts, pair_name, leg_name, direction,
                    edge_cents, poly_price, kalshi_price, kalshi_ticker)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                (ts, pair_name, match_name or k_team, "K_YES+P_NO", edge_B,
-                 match["bid"], kv["ask"], kv["ticker"]),
+                (
+                    ts,
+                    pair_name,
+                    match_name or k_team,
+                    "K_YES+P_NO",
+                    edge_B,
+                    match["bid"],
+                    kv["ask"],
+                    kv["ticker"],
+                ),
             )
-            print(f"  *** {match_name or k_team}: EDGE={edge_B:.2f}c  (K_YES@{kv['ask']:.3f} + P_NO@{1-match['bid']:.3f})", flush=True)
+            print(
+                f"  *** {match_name or k_team}: EDGE={edge_B:.2f}c  (K_YES@{kv['ask']:.3f} + P_NO@{1-match['bid']:.3f})",
+                flush=True,
+            )
             n_candidates += 1
 
     elapsed = time.time() - start
@@ -251,17 +294,21 @@ def scan_pair(k: KalshiAdapter, pair: dict, conn: sqlite3.Connection,
         (ts, pair_name, pe.get("id"), n_compared, elapsed),
     )
     conn.commit()
-    print(f"  -> {n_compared} legs compared, {n_candidates} candidates ({elapsed:.1f}s)", flush=True)
+    print(
+        f"  -> {n_compared} legs compared, {n_candidates} candidates ({elapsed:.1f}s)", flush=True
+    )
     return n_candidates
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--once", action="store_true", help="run one full sweep and exit")
-    parser.add_argument("--interval", type=int, default=120,
-                        help="seconds between sweeps (default 120)")
-    parser.add_argument("--threshold", type=float, default=1.0,
-                        help="minimum edge in cents to flag as candidate")
+    parser.add_argument(
+        "--interval", type=int, default=120, help="seconds between sweeps (default 120)"
+    )
+    parser.add_argument(
+        "--threshold", type=float, default=1.0, help="minimum edge in cents to flag as candidate"
+    )
     args = parser.parse_args()
 
     init_db()
@@ -286,7 +333,10 @@ def main() -> int:
                     print(f"  pair scan error: {e}", flush=True)
 
         elapsed = time.time() - cycle_start
-        print(f"\n=== sweep complete: {total_candidates} total candidates, {elapsed:.0f}s ===", flush=True)
+        print(
+            f"\n=== sweep complete: {total_candidates} total candidates, {elapsed:.0f}s ===",
+            flush=True,
+        )
 
         if args.once:
             break
