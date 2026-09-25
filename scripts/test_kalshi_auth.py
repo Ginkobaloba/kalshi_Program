@@ -39,7 +39,7 @@ def main() -> int:
         api_key_id=secrets.kalshi_api_key_id,
         private_key_path=str(key_path),
         env=env,
-        trading_enabled=True,   # we want auth turned on for this smoke test
+        trading_enabled=True,  # we want auth turned on for this smoke test
     )
 
     # Unauthenticated read

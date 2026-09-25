@@ -16,8 +16,8 @@ from collections.abc import Iterable
 # Kalshi fees
 # ------------------------------------------------------------------------
 
-KALSHI_TAKER_FEE_COEFF = 0.07   # fee = 0.07 * p * (1-p) in dollars per contract
-KALSHI_MAKER_FEE_MULT = 0.25    # maker pays 25% of what taker would pay
+KALSHI_TAKER_FEE_COEFF = 0.07  # fee = 0.07 * p * (1-p) in dollars per contract
+KALSHI_MAKER_FEE_MULT = 0.25  # maker pays 25% of what taker would pay
 
 
 def kalshi_taker_fee(price: float, contracts: int) -> float:
@@ -47,6 +47,7 @@ def polymarket_fee(price: float, contracts: int, bps: int = 100) -> float:
 # ------------------------------------------------------------------------
 # Kelly sizing
 # ------------------------------------------------------------------------
+
 
 def kelly_fraction_of_bankroll(
     edge_prob: float,
@@ -93,6 +94,7 @@ def kelly_contracts(
 # Probability / price
 # ------------------------------------------------------------------------
 
+
 def price_to_implied_prob(price: float) -> float:
     """YES price in dollars = implied prob. Trivially the identity, but
     we keep the function because it makes calling code self-documenting."""
@@ -111,6 +113,7 @@ def bps(edge: float) -> int:
 # ------------------------------------------------------------------------
 # Arbitrage math
 # ------------------------------------------------------------------------
+
 
 def sum_prob_arb_edge(
     yes_prices: Iterable[float],
@@ -138,8 +141,8 @@ def sum_prob_arb_edge(
 
 
 def cross_market_arb_edge(
-    leg_a_price: float,           # e.g. YES on Kalshi
-    leg_b_price: float,           # e.g. NO on Polymarket (same event)
+    leg_a_price: float,  # e.g. YES on Kalshi
+    leg_b_price: float,  # e.g. NO on Polymarket (same event)
     contracts: int = 1,
     fee_fn_a=kalshi_taker_fee,
     fee_fn_b=polymarket_fee,

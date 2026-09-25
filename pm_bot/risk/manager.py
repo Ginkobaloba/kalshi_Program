@@ -100,8 +100,11 @@ class RiskManager:
         adapter = self.adapters.get(signal.venue)
         if adapter is not None:
             current_positions = adapter.get_positions()
-            if (len(current_positions) >= self.cfg.max_concurrent_positions
-                    and signal.ticker not in {p.ticker for p in current_positions}):
+            if len(
+                current_positions
+            ) >= self.cfg.max_concurrent_positions and signal.ticker not in {
+                p.ticker for p in current_positions
+            }:
                 return False, "concurrent_position_limit"
 
         return True, "ok"
@@ -123,7 +126,11 @@ class RiskManager:
         # edge_prob implied: market_price * (1 + edge_bps/10000) for BUY YES
         # This is a rough conversion; strategies should set confidence thoughtfully.
         edge_frac = signal.edge_bps / 10000.0
-        edge_prob = min(1.0, signal.price + edge_frac) if signal.action == Action.BUY else max(0.0, signal.price - edge_frac)
+        edge_prob = (
+            min(1.0, signal.price + edge_frac)
+            if signal.action == Action.BUY
+            else max(0.0, signal.price - edge_frac)
+        )
 
         n = kelly_contracts(
             edge_prob=edge_prob,
@@ -163,9 +170,14 @@ class RiskManager:
                 rejection_reason=reason,
                 companion_count=len(signal.companion_signals),
             )
-            log.debug("Signal rejected (%s): %s %s %s @ %.2f",
-                     reason, signal.strategy, signal.ticker,
-                     signal.action.value, signal.price)
+            log.debug(
+                "Signal rejected (%s): %s %s %s @ %.2f",
+                reason,
+                signal.strategy,
+                signal.ticker,
+                signal.action.value,
+                signal.price,
+            )
             return None
 
         contracts = self.size(signal)
@@ -187,6 +199,7 @@ class RiskManager:
             return None
 
         from pm_bot.exchanges.kalshi import new_client_order_id
+
         order = Order(
             venue=signal.venue,
             ticker=signal.ticker,

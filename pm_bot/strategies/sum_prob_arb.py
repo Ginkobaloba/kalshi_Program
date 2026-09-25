@@ -90,8 +90,9 @@ class SumProbArbStrategy(Strategy):
                 continue
 
             # Size: fewest available NO contracts at best ask, capped
-            basket_size = min(self.max_contracts_per_leg,
-                              min(max(1, m.volume // 100) for m in legs))
+            basket_size = min(
+                self.max_contracts_per_leg, min(max(1, m.volume // 100) for m in legs)
+            )
 
             total_cost = sum(m.no_ask for m in legs) * basket_size
             edge_pct = (edge_per_basket * basket_size) / max(total_cost, 0.01)
@@ -99,22 +100,24 @@ class SumProbArbStrategy(Strategy):
             # Generate companion signals (must all fill or cancel all)
             companions: list[TradeSignal] = []
             for leg in legs:
-                companions.append(TradeSignal(
-                    strategy=self.name,
-                    venue=Venue.KALSHI,
-                    ticker=leg.ticker,
-                    side=Side.NO,
-                    action=Action.BUY,
-                    price=leg.no_ask,
-                    size=basket_size,
-                    edge_bps=bps(edge_pct),
-                    confidence=0.99,  # pure-math arb once confirmed
-                    reasoning=(
-                        f"sum-prob arb: event {event_id}, "
-                        f"sum(YES)={sum_yes:.3f}, "
-                        f"edge=${edge_per_basket:.3f}/basket"
-                    ),
-                ))
+                companions.append(
+                    TradeSignal(
+                        strategy=self.name,
+                        venue=Venue.KALSHI,
+                        ticker=leg.ticker,
+                        side=Side.NO,
+                        action=Action.BUY,
+                        price=leg.no_ask,
+                        size=basket_size,
+                        edge_bps=bps(edge_pct),
+                        confidence=0.99,  # pure-math arb once confirmed
+                        reasoning=(
+                            f"sum-prob arb: event {event_id}, "
+                            f"sum(YES)={sum_yes:.3f}, "
+                            f"edge=${edge_per_basket:.3f}/basket"
+                        ),
+                    )
+                )
 
             # Head signal carries companions; caller should route all or none
             head = companions[0]
@@ -123,11 +126,16 @@ class SumProbArbStrategy(Strategy):
 
             log.info(
                 "Sum-prob arb candidate: event=%s N=%d sum_yes=%.3f edge=$%.3f/basket",
-                event_id, len(legs), sum_yes, edge_per_basket,
+                event_id,
+                len(legs),
+                sum_yes,
+                edge_per_basket,
             )
 
         log.info(
             "sum_prob_arb scanned %d markets, %d multi-outcome events, %d candidates",
-            len(markets), len(groups), len(signals),
+            len(markets),
+            len(groups),
+            len(signals),
         )
         return signals

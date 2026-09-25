@@ -46,9 +46,7 @@ class PolymarketUSAdapter(ExchangeAdapter):
         self.relayer_api_key = relayer_api_key
         self.relayer_api_key_address = relayer_api_key_address
         self.relayer_host = relayer_host
-        self.trading_enabled = (
-            trading_enabled and bool(api_key and api_secret)
-        )
+        self.trading_enabled = trading_enabled and bool(api_key and api_secret)
         self.has_relayer = bool(relayer_api_key and relayer_api_key_address)
 
         if trading_enabled and not (api_key and api_secret):
@@ -123,11 +121,11 @@ class PolymarketUSAdapter(ExchangeAdapter):
 
         # Wallet private key signing — never log this
         import os
+
         signer_pk = os.environ.get("POLYMARKET_PRIVATE_KEY", "")
         if not signer_pk:
             raise RuntimeError(
-                "Relayer requires a wallet private key. Set "
-                "POLYMARKET_PRIVATE_KEY in .env."
+                "Relayer requires a wallet private key. Set " "POLYMARKET_PRIVATE_KEY in .env."
             )
 
         return RelayClient(

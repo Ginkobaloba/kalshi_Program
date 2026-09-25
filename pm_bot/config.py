@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 # Load .env if present (silent no-op if dotenv not installed)
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     pass
@@ -30,7 +31,7 @@ class RuntimeConfig(BaseModel):
 
 class KalshiExchangeConfig(BaseModel):
     enabled: bool = True
-    env: str = "demo"           # demo | prod
+    env: str = "demo"  # demo | prod
     rate_tier: str = "basic"
 
 
@@ -84,6 +85,7 @@ class ScannerConfig(BaseModel):
 
 class Secrets(BaseModel):
     """Values loaded from environment. Never log these."""
+
     kalshi_api_key_id: str = ""
     kalshi_private_key_path: str = "./kalshi_private.pem"
     kalshi_env: str = "demo"
@@ -138,8 +140,7 @@ def load_config(path: str | Path = "config.yaml") -> Config:
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(
-            f"Config file not found: {p.absolute()}. "
-            f"Copy config.yaml from the repo root."
+            f"Config file not found: {p.absolute()}. " f"Copy config.yaml from the repo root."
         )
 
     with open(p, encoding="utf-8") as f:
