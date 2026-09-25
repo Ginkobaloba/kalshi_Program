@@ -24,9 +24,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from pm_bot.exchanges.kalshi import KalshiAdapter
 
-EVENT_PAGES = 5         # 5 pages * 200 = 1000 events sampled
-EVENT_SCAN_CAP = 50     # cap orderbook scans at this many events
-THROTTLE_SEC = 1.0      # 1 req/sec — very polite, no 429s
+EVENT_PAGES = 5  # 5 pages * 200 = 1000 events sampled
+EVENT_SCAN_CAP = 50  # cap orderbook scans at this many events
+THROTTLE_SEC = 1.0  # 1 req/sec — very polite, no 429s
 
 
 def fetch_events_page(k: KalshiAdapter, cursor: str | None) -> tuple[list[dict], str | None]:
@@ -90,7 +90,9 @@ def main() -> int:
 
     print("[3/4] Pulling orderbooks for each leg (slowest step, ~1 req/sec)...")
     total_books = sum(len(m) for _, m in candidates)
-    print(f"      will pull ~{total_books} orderbooks ({total_books * THROTTLE_SEC:.0f}s estimated)\n")
+    print(
+        f"      will pull ~{total_books} orderbooks ({total_books * THROTTLE_SEC:.0f}s estimated)\n"
+    )
 
     print(f"{'sum(ASK)':>9} {'sum(BID)':>9} {'covg':>7}  {'event':<28}  title")
     print("-" * 110)
@@ -138,8 +140,10 @@ def main() -> int:
         print(f"\n=== {len(arb_candidates)} ARB CANDIDATE(S) (sum > 1.03, full coverage) ===")
         for ticker, total, n, title in arb_candidates:
             edge_per_basket = (total - 1) * 100
-            print(f"  ${edge_per_basket:5.2f} per 100-basket  sum(YES)={total:.3f}  "
-                  f"{n} legs  {ticker}  ({title})")
+            print(
+                f"  ${edge_per_basket:5.2f} per 100-basket  sum(YES)={total:.3f}  "
+                f"{n} legs  {ticker}  ({title})"
+            )
     else:
         print("\nNo arb candidates with sum > 1.03 in this sample.")
         print("Try re-running — the sort by recency rotates which events get scanned.")

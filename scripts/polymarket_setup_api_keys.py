@@ -61,7 +61,9 @@ def main() -> int:
         private_key = "0x" + private_key
 
     if len(private_key) != 66:
-        print(f"ERROR: private key looks wrong (got {len(private_key)} chars, expected 66 incl. '0x')")
+        print(
+            f"ERROR: private key looks wrong (got {len(private_key)} chars, expected 66 incl. '0x')"
+        )
         return 1
 
     print("=" * 64)
@@ -85,7 +87,7 @@ def main() -> int:
     print("[1/2] Connecting to Polymarket CLOB...")
     client = ClobClient(
         host="https://clob.polymarket.com",
-        chain_id=137,           # Polygon mainnet
+        chain_id=137,  # Polygon mainnet
         key=private_key,
     )
     try:

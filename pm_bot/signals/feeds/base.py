@@ -27,13 +27,14 @@ from typing import Any
 @dataclass
 class NewsItem:
     """A single piece of news from a feed."""
+
     text: str
     timestamp: datetime
     source: str
-    severity: str = "info"          # info | watch | breaking
+    severity: str = "info"  # info | watch | breaking
     tags: dict[str, Any] = field(default_factory=dict)
     raw: dict[str, Any] = field(default_factory=dict)
-    item_id: str = ""               # source-specific stable ID for dedup
+    item_id: str = ""  # source-specific stable ID for dedup
 
 
 class NewsFeed(abc.ABC):

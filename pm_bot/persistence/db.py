@@ -191,9 +191,23 @@ class Database:
                    price, size, edge_bps, confidence, reasoning, outcome,
                    rejection_reason, companion_count, metadata_json)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (_now(), strategy, venue, ticker, side, action, price, size,
-                 edge_bps, confidence, reasoning, outcome, rejection_reason,
-                 companion_count, json.dumps(metadata or {})),
+                (
+                    _now(),
+                    strategy,
+                    venue,
+                    ticker,
+                    side,
+                    action,
+                    price,
+                    size,
+                    edge_bps,
+                    confidence,
+                    reasoning,
+                    outcome,
+                    rejection_reason,
+                    companion_count,
+                    json.dumps(metadata or {}),
+                ),
             )
             return int(cur.lastrowid or 0)
 
@@ -219,9 +233,22 @@ class Database:
                    venue, ticker, side, action, order_type, price, size, status,
                    strategy, paper, notes)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (_now(), client_order_id, exchange_order_id, venue, ticker,
-                 side, action, order_type, price, size, status, strategy,
-                 1 if paper else 0, notes),
+                (
+                    _now(),
+                    client_order_id,
+                    exchange_order_id,
+                    venue,
+                    ticker,
+                    side,
+                    action,
+                    order_type,
+                    price,
+                    size,
+                    status,
+                    strategy,
+                    1 if paper else 0,
+                    notes,
+                ),
             )
 
     def update_order_status(
@@ -237,8 +264,7 @@ class Database:
                 """UPDATE orders SET status=?, filled_size=?, avg_fill_price=?,
                    exchange_order_id=COALESCE(?, exchange_order_id)
                    WHERE client_order_id=?""",
-                (status, filled_size, avg_fill_price, exchange_order_id,
-                 client_order_id),
+                (status, filled_size, avg_fill_price, exchange_order_id, client_order_id),
             )
 
     def log_fill(
@@ -258,8 +284,18 @@ class Database:
                 """INSERT INTO fills (ts, client_order_id, venue, ticker, side,
                    action, price, size, fee, paper)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (_now(), client_order_id, venue, ticker, side, action,
-                 price, size, fee, 1 if paper else 0),
+                (
+                    _now(),
+                    client_order_id,
+                    venue,
+                    ticker,
+                    side,
+                    action,
+                    price,
+                    size,
+                    fee,
+                    1 if paper else 0,
+                ),
             )
 
     def log_snapshot(
@@ -279,8 +315,18 @@ class Database:
                 """INSERT INTO snapshots (ts, venue, ticker, yes_bid, yes_ask,
                    no_bid, no_ask, volume, open_interest, book_json)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (_now(), venue, ticker, yes_bid, yes_ask, no_bid, no_ask,
-                 volume, open_interest, json.dumps(book) if book else None),
+                (
+                    _now(),
+                    venue,
+                    ticker,
+                    yes_bid,
+                    yes_ask,
+                    no_bid,
+                    no_ask,
+                    volume,
+                    open_interest,
+                    json.dumps(book) if book else None,
+                ),
             )
 
     def log_event(self, kind: str, message: str, metadata: dict | None = None) -> None:
@@ -310,8 +356,7 @@ class Database:
                      unrealized_pnl=excluded.unrealized_pnl,
                      trade_count=excluded.trade_count,
                      fee_total=excluded.fee_total""",
-                (day, strategy, realized_pnl, unrealized_pnl, trade_count,
-                 fee_total),
+                (day, strategy, realized_pnl, unrealized_pnl, trade_count, fee_total),
             )
 
     # ----- reads ----------------------------------------------------------

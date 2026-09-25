@@ -208,17 +208,23 @@ def check_paper_fills(adapters: dict[Venue, ExchangeAdapter], db: Database) -> N
                     fee=f.fee,
                     paper=True,
                 )
-                log.info("[paper fill] %s %s %d @ %.3f (fee $%.3f)",
-                        f.action.value, f.side.value, f.size, f.price, f.fee)
+                log.info(
+                    "[paper fill] %s %s %d @ %.3f (fee $%.3f)",
+                    f.action.value,
+                    f.side.value,
+                    f.size,
+                    f.price,
+                    f.fee,
+                )
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="pm_bot prediction market bot")
     parser.add_argument("--config", default="config.yaml")
-    parser.add_argument("--once", action="store_true",
-                        help="run one scan cycle and exit")
-    parser.add_argument("--dry", action="store_true",
-                        help="scan + risk evaluate, but never place orders")
+    parser.add_argument("--once", action="store_true", help="run one scan cycle and exit")
+    parser.add_argument(
+        "--dry", action="store_true", help="scan + risk evaluate, but never place orders"
+    )
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -244,13 +250,16 @@ def main() -> int:
     risk = RiskManager(cfg.risk, db, adapters)
 
     if not strategies:
-        log.warning("No strategies enabled. Edit config.yaml and set "
-                   "strategies.<name>.enabled: true.")
+        log.warning(
+            "No strategies enabled. Edit config.yaml and set " "strategies.<name>.enabled: true."
+        )
 
-    log.info("Starting pm_bot | paper=%s | strategies=%s | adapters=%s",
-            cfg.runtime.paper_trading,
-            [s.name for s in strategies],
-            [v.value for v in adapters.keys()])
+    log.info(
+        "Starting pm_bot | paper=%s | strategies=%s | adapters=%s",
+        cfg.runtime.paper_trading,
+        [s.name for s in strategies],
+        [v.value for v in adapters.keys()],
+    )
 
     exit_code = 0
     try:
